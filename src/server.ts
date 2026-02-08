@@ -18,6 +18,7 @@ import repairRoutes from './routes/repair.routes';
 import uploadRoutes from './routes/upload.routes';
 import aiRoutes from './routes/ai.routes';
 import unitsRoutes from './routes/units.routes';
+import { hashPassword } from './utils/password.util';
 
 dotenv.config();
 
@@ -29,44 +30,29 @@ const PORT = process.env.PORT || 3000;
 // ============================================
 // TEMPORARY SETUP ROUTE
 // ============================================
-import { hashPassword } from './utils/password.util';
-
-// ... (imports remain)
-
-// ============================================
-// TEMPORARY SETUP ROUTE
-// ============================================
-app.get('/reset-admin-password', async (req: Request, res: Response) => {
-    try {
-        const pool = getPool();
-        const newHash = await hashPassword('123123'); // Simple password
-
-        await pool.query(
-            `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
-            [newHash]
-        );
-
-        res.send('✅ Admin password reset to: 123123');
-    } catch (e: any) {
-        res.status(500).send('Failed ' + e.message);
-    }
-});
-
 app.get('/setup-db-force', async (req: Request, res: Response) => {
     try {
         const pool = getPool();
-        // ... (rest of function)
         const schemaPath = path.join(__dirname, '../database/schema.sql');
+        const newHash = await hashPassword('123123'); // Simple password for Admin
 
         if (!fs.existsSync(schemaPath)) {
             // Try looking in root if not in dist
             const schemaPathRoot = path.join(__dirname, '../../database/schema.sql');
             if (fs.existsSync(schemaPathRoot)) {
                 const sql = fs.readFileSync(schemaPathRoot, 'utf8');
-                // Remove \c command as it fails in pool connection
                 const cleanSql = sql.replace(/\\c .*/g, '-- switched db');
+
+                // 1. Run Schema
                 await pool.query(cleanSql);
-                res.send('✅ Database Setup Complete! Tables created and Admin user inserted. You can now login with ADMIN001 / password123');
+
+                // 2. Force Reset Admin Password
+                await pool.query(
+                    `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
+                    [newHash]
+                );
+
+                res.send('✅ Database Setup Complete! Admin password reset to: 123123. Login with ADMIN001 / 123123');
                 return;
             }
             res.status(500).send('Schema file not found');
@@ -74,14 +60,32 @@ app.get('/setup-db-force', async (req: Request, res: Response) => {
         }
 
         const sql = fs.readFileSync(schemaPath, 'utf8');
-        // Remove \c command
         const cleanSql = sql.replace(/\\c .*/g, '-- switched db');
 
+        // 1. Run Schema
         await pool.query(cleanSql);
-        res.send('✅ Database Setup Complete! Tables created and Admin user inserted. You can now login with ADMIN001 / password123');
+
+        // 2. Force Reset Admin Password
+        await pool.query(
+            `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
+            [newHash]
+        );
+
+        res.send('✅ Database Setup Complete! Admin password reset to: 123123. Login with ADMIN001 / 123123');
     } catch (error: any) {
-        console.error('Setup failed:', error);
-        res.status(500).send(`❌ Setup Failed: ${error.message}`);
+        // Even if schema fails (e.g. tables exist), try to reset password
+        try {
+            const pool = getPool();
+            const newHash = await hashPassword('123123');
+            await pool.query(
+                `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
+                [newHash]
+            );
+            res.send('⚠️ Schema might failed (exists?), but Admin password was FORCE reset to: 123123');
+        } catch (e: any) {
+            console.error('Setup failed:', error);
+            res.status(500).send(`❌ Setup Failed: ${error.message}`);
+        }
     }
 });
 
