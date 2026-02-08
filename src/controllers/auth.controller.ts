@@ -42,7 +42,7 @@ export const login = async (req: Request, res: Response) => {
 
             return res.status(401).json({
                 success: false,
-                message: 'رقم الموظف أو كلمة المرور غير صحيحة',
+                message: `Debug: User '${employee_id}' Not Found in DB (or not active)`,
             });
         }
 
@@ -54,7 +54,7 @@ export const login = async (req: Request, res: Response) => {
         if (!isPasswordValid) {
             return res.status(401).json({
                 success: false,
-                message: 'رقم الموظف أو كلمة المرور غير صحيحة',
+                message: 'Debug: Password Mismatch (Wrong Password)',
             });
         }
 
