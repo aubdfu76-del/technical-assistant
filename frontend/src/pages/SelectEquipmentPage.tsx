@@ -95,25 +95,47 @@ const SelectEquipmentPage = () => {
                         </div>
                     </div>
 
-                    <motion.button
-                        whileHover={{ scale: 1.05, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-                        onClick={handleLogout}
-                        style={{
-                            padding: '10px 20px',
-                            borderRadius: '12px',
-                            border: '1px solid rgba(239, 68, 68, 0.2)',
-                            background: 'transparent',
-                            color: '#ef4444',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            cursor: 'pointer',
-                            fontWeight: 600
-                        }}
-                    >
-                        <LogOut size={18} />
-                        <span>تسجيل الخروج</span>
-                    </motion.button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <motion.button
+                            whileHover={{ scale: 1.05, backgroundColor: 'rgba(59, 130, 246, 0.2)' }}
+                            onClick={() => navigate('/dashboard')}
+                            style={{
+                                padding: '10px 20px',
+                                borderRadius: '12px',
+                                border: '1px solid var(--color-primary)',
+                                background: 'rgba(59, 130, 246, 0.1)',
+                                color: 'var(--color-primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                            }}
+                        >
+                            <Activity size={18} />
+                            <span>لوحة التحكم</span>
+                        </motion.button>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                            onClick={handleLogout}
+                            style={{
+                                padding: '10px 20px',
+                                borderRadius: '12px',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                background: 'transparent',
+                                color: '#ef4444',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                            }}
+                        >
+                            <LogOut size={18} />
+                            <span>تسجيل الخروج</span>
+                        </motion.button>
+                    </div>
                 </div>
 
                 <div className="glass-card" style={{ padding: '10px 20px', display: 'flex', gap: '15px', alignItems: 'center', borderRadius: '20px' }}>
