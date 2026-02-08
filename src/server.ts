@@ -3,7 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { initializePool, closePool } from './config/database';
+import fs from 'fs';
+import path from 'path';
+import { initializePool, closePool, getPool } from './config/database';
 import authRoutes from './routes/auth.routes';
 import usersRoutes from './routes/users.routes';
 import vehiclesRoutes from './routes/vehicles.routes';
@@ -16,14 +18,48 @@ import repairRoutes from './routes/repair.routes';
 import uploadRoutes from './routes/upload.routes';
 import aiRoutes from './routes/ai.routes';
 import unitsRoutes from './routes/units.routes';
-import path from 'path';
 
 dotenv.config();
 
-console.log('🔄 Server Restarting... (Strict Isolation Mode)');
+console.log('🔄 Server Restarting... (Full Setup Mode)');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ============================================
+// TEMPORARY SETUP ROUTE
+// ============================================
+app.get('/setup-db-force', async (req: Request, res: Response) => {
+    try {
+        const pool = getPool();
+        const schemaPath = path.join(__dirname, '../database/schema.sql');
+
+        if (!fs.existsSync(schemaPath)) {
+            // Try looking in root if not in dist
+            const schemaPathRoot = path.join(__dirname, '../../database/schema.sql');
+            if (fs.existsSync(schemaPathRoot)) {
+                const sql = fs.readFileSync(schemaPathRoot, 'utf8');
+                // Remove \c command as it fails in pool connection
+                const cleanSql = sql.replace(/\\c .*/g, '-- switched db');
+                await pool.query(cleanSql);
+                res.send('✅ Database Setup Complete! Tables created and Admin user inserted. You can now login with ADMIN001 / password123');
+                return;
+            }
+            res.status(500).send('Schema file not found');
+            return;
+        }
+
+        const sql = fs.readFileSync(schemaPath, 'utf8');
+        // Remove \c command
+        const cleanSql = sql.replace(/\\c .*/g, '-- switched db');
+
+        await pool.query(cleanSql);
+        res.send('✅ Database Setup Complete! Tables created and Admin user inserted. You can now login with ADMIN001 / password123');
+    } catch (error: any) {
+        console.error('Setup failed:', error);
+        res.status(500).send(`❌ Setup Failed: ${error.message}`);
+    }
+});
 
 // ============================================
 // Middleware
