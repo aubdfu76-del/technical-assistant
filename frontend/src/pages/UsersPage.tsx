@@ -312,7 +312,9 @@ const UsersPage = () => {
             setIsModalOpen(false);
             fetchUsers(pagination.page);
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'حدث خطأ أثناء حفظ البيانات');
+            console.error('Submit Error:', err);
+            const msg = err.response?.data?.message || err.message || 'حدث خطأ أثناء حفظ البيانات';
+            toast.error(`خطأ: ${msg}`);
         }
     };
 
