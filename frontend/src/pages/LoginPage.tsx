@@ -67,7 +67,9 @@ const LoginPage: React.FC = () => {
                 toast.error(response.message || 'فشل تسجيل الدخول');
             }
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'اسم المستخدم أو كلمة المرور غير صحيحة');
+            console.error('Login Error:', err);
+            const msg = err.response?.data?.message || err.message || 'خطأ غير معروف في الاتصال';
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
