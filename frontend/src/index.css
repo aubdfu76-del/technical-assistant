@@ -1,0 +1,183 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+
+:root {
+  font-family: 'Outfit', 'IBM Plex Sans Arabic', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Tactical / Military Theme */
+  --color-bg: #2B2D31;
+  /* Charcoal Grey - Rocky Background */
+  --color-surface: #32353b;
+  /* Slightly lighter grey for cards */
+  --color-surface-soft: #1e1f22;
+  /* Darker inputs */
+
+  --color-primary: #556B2F;
+  /* Olive Drab - Operations Buttons */
+  --color-secondary: #6B8E23;
+  /* Olive Drab Light */
+  --color-accent: #8B0000;
+  /* Dark Red - Critical Alerts */
+  --color-highlight: #C2B280;
+  /* Sand/Khaki - Main Text & Data */
+
+  --color-text: #C2B280;
+  /* Sand/Khaki */
+  --color-text-muted: #9CA3AF;
+  /* Muted Grey for less important text */
+  --color-white: #E5E7EB;
+  /* Off-white for readability where needed */
+
+  --glass-bg: rgba(43, 45, 49, 0.7);
+  --glass-border: rgba(194, 178, 128, 0.1);
+  /* Subtle Sand border */
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+  --shadow-neon: 0 0 15px rgba(85, 107, 47, 0.4);
+  /* Olive glow */
+
+  color-scheme: dark;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) var(--color-bg);
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--color-bg);
+}
+
+.glass-card {
+  background: var(--color-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  /* Sharper corners for tactical look */
+  box-shadow: var(--shadow-card);
+}
+
+.neon-button {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  /* White text on Olive buttons for readability */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 24px;
+  border-radius: 8px;
+  /* Tactical squared corners */
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.neon-button:hover {
+  transform: translateY(-2px);
+  background: var(--color-secondary);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  border-color: var(--color-highlight);
+}
+
+.neon-input {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--glass-border);
+  padding: 14px 18px;
+  border-radius: 8px;
+  color: var(--color-highlight);
+  width: 100%;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.neon-input:focus {
+  border-color: var(--color-highlight);
+  /* Sand border on focus */
+  background: #18191c;
+  box-shadow: 0 0 0 1px rgba(194, 178, 128, 0.2);
+}
+
+/* Typography Overrides */
+h1,
+h2,
+h3,
+h4 {
+  color: var(--color-white);
+  font-weight: 800;
+  background: none;
+  -webkit-text-fill-color: initial;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary);
+}
+
+/* TACTICAL ICON OVERRIDES */
+/* Determine icons by svg tag generically or specific lucide class if present */
+svg.lucide {
+  stroke-width: 2.5px !important;
+  /* Thicker, bolder lines */
+  /* Optional: filter drop-shadow for depth */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* Responsive Design for Diagnostic Simulator */
+@media (max-width: 768px) {
+
+  /* تقليل padding على الشاشات الصغيرة */
+  .diagnostic-simulator-container {
+    padding: 20px 20px !important;
+  }
+
+  /* تصغير حجم العنوان */
+  .diagnostic-simulator-title {
+    font-size: 1.8rem !important;
+  }
+
+  /* جعل الأزرار بعرض كامل على الشاشات الصغيرة */
+  .diagnostic-add-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .diagnostic-simulator-container {
+    padding: 15px 15px !important;
+  }
+
+  .diagnostic-simulator-title {
+    font-size: 1.5rem !important;
+  }
+}

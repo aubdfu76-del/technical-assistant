@@ -1,0 +1,63 @@
+/* AI Message Formatting Styles */
+.ai-message-content {
+    line-height: 1.8;
+    font-size: 15px;
+}
+
+.ai-message-content .message-header {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--color-highlight);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-message-content .message-section {
+    margin-bottom: 16px;
+}
+
+.ai-message-content .message-list-item {
+    margin-bottom: 6px;
+    padding-right: 4px;
+    line-height: 1.7;
+}
+
+.ai-message-content .message-warning {
+    background: rgba(239, 68, 68, 0.1);
+    border-right: 3px solid #ef4444;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+}
+
+.ai-message-content .message-tip {
+    background: rgba(59, 130, 246, 0.1);
+    border-right: 3px solid #3b82f6;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+}
+
+.ai-message-content .message-source {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.ai-message-content code {
+    background: rgba(194, 178, 128, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+}
+
+.ai-message-content strong {
+    font-weight: 600;
+    color: var(--color-white);
+}
