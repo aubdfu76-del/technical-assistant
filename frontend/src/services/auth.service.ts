@@ -1,10 +1,15 @@
 import axios from 'axios';
 
 const getBaseUrl = () => {
+    // 🚨 FORCE CORRECT BACKEND URL IN PRODUCTION
+    // This bypasses any incorrect VITE_API_URL in Render settings
+    if (import.meta.env.PROD) {
+        console.log('🔒 Using Hardcoded Production Backend URL');
+        return 'https://technical-assistant.onrender.com/api';
+    }
+
     let url = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-    // Remove trailing slash if exists
     if (url.endsWith('/')) url = url.slice(0, -1);
-    // Append /api if not present
     if (!url.endsWith('/api')) url += '/api';
     return url;
 };
