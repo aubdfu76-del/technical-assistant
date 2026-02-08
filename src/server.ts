@@ -29,9 +29,33 @@ const PORT = process.env.PORT || 3000;
 // ============================================
 // TEMPORARY SETUP ROUTE
 // ============================================
+import { hashPassword } from './utils/password.util';
+
+// ... (imports remain)
+
+// ============================================
+// TEMPORARY SETUP ROUTE
+// ============================================
+app.get('/reset-admin-password', async (req: Request, res: Response) => {
+    try {
+        const pool = getPool();
+        const newHash = await hashPassword('123123'); // Simple password
+
+        await pool.query(
+            `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
+            [newHash]
+        );
+
+        res.send('✅ Admin password reset to: 123123');
+    } catch (e: any) {
+        res.status(500).send('Failed ' + e.message);
+    }
+});
+
 app.get('/setup-db-force', async (req: Request, res: Response) => {
     try {
         const pool = getPool();
+        // ... (rest of function)
         const schemaPath = path.join(__dirname, '../database/schema.sql');
 
         if (!fs.existsSync(schemaPath)) {
