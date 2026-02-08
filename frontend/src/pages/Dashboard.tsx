@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import {
     Users,
     Car,
     AlertCircle,
-    CheckCircle2,
-    TrendingUp,
     Clock,
     Wrench,
     PlayCircle
@@ -16,50 +13,8 @@ import { dashboardService } from '../services/dashboard.service';
 import { authService } from '../services/auth.service';
 import { vehiclesService, type VehicleSpecs } from '../services/vehicles.service';
 
-const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
-    <motion.div
-        whileHover={{ y: -10 }}
-        className="glass-card"
-        style={{ padding: '24px', flex: 1, minWidth: '240px' }}
-    >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '12px',
-                background: `rgba(${color}, 0.1)`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: `1px solid rgba(${color}, 0.2)`
-            }}>
-                <Icon color={`rgb(${color})`} size={28} />
-            </div>
-            {trend && (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    color: '#10b981',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    background: 'rgba(16, 185, 129, 0.05)',
-                    padding: '4px 10px',
-                    borderRadius: '20px'
-                }}>
-                    <TrendingUp size={14} />
-                    <span>{trend}</span>
-                </div>
-            )}
-        </div>
-        <h3 style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>{title}</h3>
-        <p style={{ fontSize: '1.8rem', fontWeight: 800 }}>{value}</p>
-    </motion.div>
-);
-
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const selectedEquipment = authService.getSelectedEquipment();
 
@@ -68,8 +23,7 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const statsRes = await dashboardService.getStats();
-                setStats(statsRes.data);
+                await dashboardService.getStats();
             } catch (err) {
                 console.error(err);
             } finally {

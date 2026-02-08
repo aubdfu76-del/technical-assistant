@@ -1,3 +1,15 @@
+import React from 'react';
+import { Modal } from './Modal';
+import { FileText } from 'lucide-react';
+
+interface TrainingMaterial {
+    id: number;
+    title: string;
+    type: 'video' | 'pdf' | 'image' | 'text';
+    url?: string;
+    content?: string;
+}
+
 // Material Viewer Component
 const MaterialViewerModal = ({ material, onClose }: { material: TrainingMaterial | null; onClose: () => void }) => {
     if (!material) return null;
@@ -47,3 +59,5 @@ const MaterialViewerModal = ({ material, onClose }: { material: TrainingMaterial
         </Modal>
     );
 };
+
+export default MaterialViewerModal;
