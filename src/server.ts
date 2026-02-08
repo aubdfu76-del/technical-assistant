@@ -28,6 +28,47 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
+// DEBUG AUTH ROUTE
+// ============================================
+import { comparePassword } from './utils/password.util';
+app.get('/debug-auth', async (req: Request, res: Response) => {
+    try {
+        const pool = getPool();
+        const { employee_id, password } = req.query;
+
+        if (!employee_id) return res.send('Provide ?employee_id=...&password=...');
+
+        const result = await pool.query('SELECT * FROM users WHERE employee_id = $1', [employee_id]);
+
+        if (result.rows.length === 0) return res.send(`❌ User ${employee_id} NOT FOUND in DB`);
+
+        const user = result.rows[0];
+        let comparison = false;
+        if (password) {
+            comparison = await comparePassword(String(password), user.password_hash);
+        }
+
+        res.json({
+            found: true,
+            user_data: {
+                id: user.id,
+                employee_id: user.employee_id,
+                role: user.role,
+                is_active: user.is_active,
+                hash_starts_with: user.password_hash ? user.password_hash.substring(0, 10) + '...' : 'NO_HASH',
+            },
+            password_check: password ? {
+                provided: password,
+                match: comparison
+            } : 'No password provided to check'
+        });
+
+    } catch (e: any) {
+        res.status(500).send('Error: ' + e.message);
+    }
+});
+
+// ============================================
 // TEMPORARY SETUP ROUTE
 // ============================================
 app.get('/setup-db-force', async (req: Request, res: Response) => {
