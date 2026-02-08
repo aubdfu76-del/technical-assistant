@@ -18,7 +18,7 @@ import repairRoutes from './routes/repair.routes';
 import uploadRoutes from './routes/upload.routes';
 import aiRoutes from './routes/ai.routes';
 import unitsRoutes from './routes/units.routes';
-import { hashPassword } from './utils/password.util';
+import { hashPassword, comparePassword } from './utils/password.util';
 
 dotenv.config();
 
@@ -28,105 +28,92 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ============================================
-// DEBUG AUTH ROUTE
-// ============================================
-import { comparePassword } from './utils/password.util';
-app.get('/debug-auth', async (req: Request, res: Response) => {
-    try {
-        const pool = getPool();
-        const { employee_id, password } = req.query;
-
-        if (!employee_id) return res.send('Provide ?employee_id=...&password=...');
-
-        const result = await pool.query('SELECT * FROM users WHERE employee_id = $1', [employee_id]);
-
-        if (result.rows.length === 0) return res.send(`❌ User ${employee_id} NOT FOUND in DB`);
-
-        const user = result.rows[0];
-        let comparison = false;
-        if (password) {
-            comparison = await comparePassword(String(password), user.password_hash);
-        }
-
-        res.json({
-            found: true,
-            user_data: {
-                id: user.id,
-                employee_id: user.employee_id,
-                role: user.role,
-                is_active: user.is_active,
-                hash_starts_with: user.password_hash ? user.password_hash.substring(0, 10) + '...' : 'NO_HASH',
-            },
-            password_check: password ? {
-                provided: password,
-                match: comparison
-            } : 'No password provided to check'
-        });
-
-    } catch (e: any) {
-        res.status(500).send('Error: ' + e.message);
-    }
-});
-
-// ============================================
-// TEMPORARY SETUP ROUTE
+// SETUP & DEBUG ROUTE (COMBINED)
 // ============================================
 app.get('/setup-db-force', async (req: Request, res: Response) => {
     try {
         const pool = getPool();
         const schemaPath = path.join(__dirname, '../database/schema.sql');
-        const newHash = await hashPassword('123123'); // Simple password for Admin
+        const simplePass = '123123';
+        const newHash = await hashPassword(simplePass);
 
-        if (!fs.existsSync(schemaPath)) {
-            // Try looking in root if not in dist
-            const schemaPathRoot = path.join(__dirname, '../../database/schema.sql');
-            if (fs.existsSync(schemaPathRoot)) {
-                const sql = fs.readFileSync(schemaPathRoot, 'utf8');
+        let statusLog = [];
+
+        // 1. Run Schema if needed (or force run it)
+        statusLog.push("Checking Schema...");
+        if (fs.existsSync(schemaPath) || fs.existsSync(path.join(__dirname, '../../database/schema.sql'))) {
+            const actualPath = fs.existsSync(schemaPath) ? schemaPath : path.join(__dirname, '../../database/schema.sql');
+            const sql = fs.readFileSync(actualPath, 'utf8');
+            // Try to run schema but catch error if tables exist
+            try {
                 const cleanSql = sql.replace(/\\c .*/g, '-- switched db');
-
-                // 1. Run Schema
                 await pool.query(cleanSql);
-
-                // 2. Force Reset Admin Password
-                await pool.query(
-                    `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
-                    [newHash]
-                );
-
-                res.send('✅ Database Setup Complete! Admin password reset to: 123123. Login with ADMIN001 / 123123');
-                return;
+                statusLog.push("✅ Schema executed (Tables created/reset).");
+            } catch (e: any) {
+                statusLog.push(`⚠️ Schema execution skipped/failed (Tables might exist): ${e.message}`);
             }
-            res.status(500).send('Schema file not found');
-            return;
+        } else {
+            statusLog.push("⚠️ Schema file not found, skipping schema execution.");
         }
-
-        const sql = fs.readFileSync(schemaPath, 'utf8');
-        const cleanSql = sql.replace(/\\c .*/g, '-- switched db');
-
-        // 1. Run Schema
-        await pool.query(cleanSql);
 
         // 2. Force Reset Admin Password
-        await pool.query(
-            `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
-            [newHash]
-        );
-
-        res.send('✅ Database Setup Complete! Admin password reset to: 123123. Login with ADMIN001 / 123123');
-    } catch (error: any) {
-        // Even if schema fails (e.g. tables exist), try to reset password
+        statusLog.push("Resetting Admin Password...");
         try {
-            const pool = getPool();
-            const newHash = await hashPassword('123123');
-            await pool.query(
-                `UPDATE users SET password_hash = $1 WHERE employee_id = 'ADMIN001'`,
-                [newHash]
-            );
-            res.send('⚠️ Schema might failed (exists?), but Admin password was FORCE reset to: 123123');
+            // First, ensure Admin exists if schema didn't run
+            const userCheck = await pool.query("SELECT * FROM users WHERE employee_id = 'ADMIN001'");
+            if (userCheck.rows.length === 0) {
+                statusLog.push("⚠️ Admin not found, inserting manual admin...");
+                await pool.query(`INSERT INTO users (employee_id, full_name, email, password_hash, role, is_active) 
+                                   VALUES ('ADMIN001', 'System Admin', 'admin@example.com', $1, 'admin', true)`, [newHash]);
+            } else {
+                await pool.query(
+                    `UPDATE users SET password_hash = $1, is_active = true WHERE employee_id = 'ADMIN001'`,
+                    [newHash]
+                );
+            }
+            statusLog.push("✅ Admin password reset to: 123123");
         } catch (e: any) {
-            console.error('Setup failed:', error);
-            res.status(500).send(`❌ Setup Failed: ${error.message}`);
+            statusLog.push(`❌ Failed to reset password: ${e.message}`);
         }
+
+        // 3. DEBUG: Fetch and Show User Data
+        const debugUser = await pool.query("SELECT id, employee_id, role, is_active, password_hash, full_name FROM users WHERE employee_id = 'ADMIN001'");
+        let userData = null;
+        let passwordTest = false;
+
+        if (debugUser.rows.length > 0) {
+            userData = debugUser.rows[0];
+            passwordTest = await comparePassword(simplePass, userData.password_hash);
+            statusLog.push(`🔍 DEBUG CHECK: User found. Active=${userData.is_active}. Password '123123' match=${passwordTest}`);
+        } else {
+            statusLog.push("❌ DEBUG CHECK: User ADMIN001 NOT FOUND after attempts!");
+        }
+
+        res.json({
+            success: true,
+            logs: statusLog,
+            user_debug: {
+                found: !!userData,
+                details: userData ? {
+                    id: userData.id,
+                    employee_id: userData.employee_id,
+                    role: userData.role,
+                    is_active: userData.is_active,
+                    hash_preview: userData.password_hash.substring(0, 15) + '...'
+                } : null,
+                login_test: {
+                    attempt_password: simplePass,
+                    will_succeed: passwordTest
+                }
+            }
+        });
+
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
 
