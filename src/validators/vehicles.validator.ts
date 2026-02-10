@@ -11,6 +11,12 @@ export const createVehicleValidation = [
         .isLength({ min: 2, max: 50 })
         .withMessage('رقم المعدة يجب أن يكون بين 2 و 50 حرف'),
 
+    body('equipment_name')
+        .optional()
+        .trim()
+        .isLength({ max: 200 })
+        .withMessage('اسم المعدة يجب ألا يتجاوز 200 حرف'),
+
     body('vehicle_type')
         .trim()
         .notEmpty()
