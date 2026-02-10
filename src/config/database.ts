@@ -9,7 +9,9 @@ const connectionString = process.env.DATABASE_URL;
 
 const poolConfig = connectionString ? {
     connectionString,
-    ssl: isProduction ? { rejectUnauthorized: false } : false
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
+    // Force IPv4 to prevent IPv6 connection issues
+    options: '-c search_path=public'
 } : {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),
@@ -23,7 +25,11 @@ const pool = new Pool({
     ...poolConfig,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000,
+    // Force IPv4
+    ...(connectionString && {
+        host: new URL(connectionString.replace('postgresql://', 'http://')).hostname
+    })
 });
 
 /**
