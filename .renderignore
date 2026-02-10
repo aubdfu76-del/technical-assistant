@@ -1,0 +1,10 @@
+# Ignore frontend directory during backend build
+frontend/
+*.md
+*.txt
+test-*.js
+check-*.js
+debug-*.js
+*.sql
+uploads/
+.git/
