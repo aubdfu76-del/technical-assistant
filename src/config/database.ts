@@ -1,11 +1,19 @@
 import { Pool } from 'pg';
-import dotenv from 'dotenv';
 
-dotenv.config();
+// Note: In production (Render), environment variables are provided directly
+// dotenv is only needed for local development
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 
 // PostgreSQL Configuration
 const isProduction = process.env.NODE_ENV === 'production';
 const connectionString = process.env.DATABASE_URL;
+
+console.log('🔍 Environment Check:');
+console.log('   NODE_ENV:', process.env.NODE_ENV);
+console.log('   DATABASE_URL exists:', !!connectionString);
+console.log('   Connection string preview:', connectionString ? connectionString.substring(0, 30) + '...' : 'MISSING');
 
 const poolConfig = connectionString ? {
     connectionString,

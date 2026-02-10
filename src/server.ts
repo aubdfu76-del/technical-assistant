@@ -20,7 +20,10 @@ import aiRoutes from './routes/ai.routes';
 import unitsRoutes from './routes/units.routes';
 import { hashPassword, comparePassword } from './utils/password.util';
 
-dotenv.config();
+// Load environment variables only in development
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 
 console.log('🔄 Server Restarting... (Full Setup Mode)');
 
