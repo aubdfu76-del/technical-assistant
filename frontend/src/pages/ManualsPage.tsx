@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { aiService, type TechnicalManual } from '../services/ai.service';
-import { authService } from '../services/auth.service';
+import { authService, SERVER_URL, API_BASE_URL } from '../services/auth.service';
 import { vehiclesService, type Vehicle } from '../services/vehicles.service';
 import { toast } from 'react-hot-toast';
 
@@ -279,7 +279,7 @@ const ManualsPage = () => {
                                         <motion.a
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
-                                            href={`http://localhost:3000/uploads/manuals/${manual.file_path}`}
+                                            href={`${SERVER_URL}/uploads/manuals/${manual.file_path}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             style={{
@@ -301,7 +301,7 @@ const ManualsPage = () => {
                                         <motion.a
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
-                                            href={`http://localhost:3000/api/ai/manuals/${manual.id}/download`}
+                                            href={`${API_BASE_URL}/ai/manuals/${manual.id}/download`}
                                             download
                                             style={{
                                                 padding: '8px 16px',

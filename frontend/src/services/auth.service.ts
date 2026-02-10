@@ -3,18 +3,27 @@ import axios from 'axios';
 const getBaseUrl = () => {
     // 🚨 FORCE CORRECT BACKEND URL IN PRODUCTION
     // This bypasses any incorrect VITE_API_URL in Render settings
-    if (import.meta.env.PROD) {
-        console.log('🔒 Using Hardcoded Production Backend URL');
-        return 'https://technical-assistant.onrender.com/api';
+    // Use VITE_API_URL if defined
+    if (import.meta.env.VITE_API_URL) {
+        let url = import.meta.env.VITE_API_URL;
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        if (!url.endsWith('/api')) url += '/api';
+        return url;
     }
 
-    let url = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-    if (url.endsWith('/')) url = url.slice(0, -1);
-    if (!url.endsWith('/api')) url += '/api';
-    return url;
+    // Default to relative path in production (assumes same-origin serving)
+    if (import.meta.env.PROD) {
+        return '/api';
+    }
+
+    // Default development URL
+    return 'http://localhost:3000/api';
 };
 
-const API_BASE_URL = getBaseUrl();
+export const API_BASE_URL = getBaseUrl();
+export const SERVER_URL = API_BASE_URL.endsWith('/api')
+    ? API_BASE_URL.slice(0, -4)
+    : API_BASE_URL;
 
 console.log('🔗 API Base URL configured to:', API_BASE_URL);
 

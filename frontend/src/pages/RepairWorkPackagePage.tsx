@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { authService } from '../services/auth.service';
+import { authService, SERVER_URL } from '../services/auth.service';
 import { repairService, type RepairTaskDetails } from '../services/repair.service';
 import { uploadService } from '../services/upload.service';
 import { toast } from 'react-hot-toast';
@@ -30,9 +30,7 @@ import { toast } from 'react-hot-toast';
 const getFullUrl = (url: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    // Assuming API is at localhost:3000 based on previous context
-    const baseUrl = 'http://localhost:3000';
-    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    return `${SERVER_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const MediaGallery = ({ media, onDelete, onReorder, canEdit }: {

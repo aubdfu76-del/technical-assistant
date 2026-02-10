@@ -9,6 +9,7 @@ import { aiService } from '../services/ai.service';
 import type { Citation as AICitation, TechnicalManual } from '../services/ai.service';
 import { toast } from 'react-hot-toast';
 import { authService } from '../services/auth.service';
+import { vehiclesService } from '../services/vehicles.service';
 import '../styles/ai-message.css';
 
 interface Message {
@@ -437,12 +438,7 @@ const AssistantPage = () => {
 
     const loadVehicles = async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/vehicles', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            const data = await response.json();
+            const data = await vehiclesService.getAll();
             setVehicles(data.data || []);
         } catch (error) {
             console.error('Failed to load vehicles:', error);
