@@ -303,6 +303,10 @@ const startServer = async () => {
         // Initialize SQL Server connection pool
         await initializePool();
 
+        // Run database migrations
+        const { runMigrations } = await import('./migrations');
+        await runMigrations();
+
         // Start Express server
         app.listen(PORT, () => {
             console.log('');
