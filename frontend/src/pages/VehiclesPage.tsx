@@ -236,7 +236,7 @@ const VehiclesPage = () => {
 
             const vehicleData = {
                 plate_number: fieldsMap['رقم المعدة']?.trim() || '',
-                equipment_name: fieldsMap['اسم المعدة (النوع)']?.trim() || '',
+                equipment_name: fieldsMap['اسم المعدة (النوع)']?.trim() || null,
                 vehicle_type: fieldsMap['اسم المعدة (النوع)']?.trim() || 'شاحنة',
                 manufacturer: fieldKeys.has('التصنيع (الشركة المصنعة)') ? (fieldsMap['التصنيع (الشركة المصنعة)']?.trim() || null) : null,
                 model: fieldKeys.has('الموديل (الطراز)') ? (fieldsMap['الموديل (الطراز)']?.trim() || null) : null,
@@ -246,6 +246,9 @@ const VehiclesPage = () => {
                 status: (fieldsMap['حالة المعدة'] as any) || 'active',
                 image_url: formData.image_url || ''
             };
+
+            // Debug: Log the data being sent
+            console.log('📤 Vehicle Data to be sent:', vehicleData);
 
             // Validation: رقم المعدة is required
             if (!vehicleData.plate_number || vehicleData.plate_number.trim() === '') {
