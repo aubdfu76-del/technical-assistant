@@ -133,7 +133,9 @@ const allowedOrigins = [
     'http://localhost:5174',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
-    'https://technical-assistant-frontend.onrender.com', // Explicitly allowed
+    'https://technical-assistant-frontend.onrender.com',
+    'https://fixly.click', // ✅ Production domain
+    'http://fixly.click',  // ✅ HTTP fallback
     process.env.CLIENT_URL || ''
 ].filter(Boolean);
 
