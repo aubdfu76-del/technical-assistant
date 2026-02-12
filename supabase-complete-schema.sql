@@ -246,9 +246,13 @@ CREATE TABLE repair_tasks (
     difficulty VARCHAR(50) CHECK (difficulty IN ('easy', 'medium', 'hard')),
     estimated_time VARCHAR(100),
     vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE CASCADE,
+    vehicle_ids INTEGER[],
+    task_type VARCHAR(50) DEFAULT 'repair',
     safety_procedures TEXT,
     workshop_requirements TEXT,
     technician_count INTEGER,
+    technicians_count INTEGER,
+    required_tools TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
