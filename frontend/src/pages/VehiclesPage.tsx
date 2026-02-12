@@ -194,7 +194,7 @@ const VehiclesPage = () => {
                 status: 'active',
                 custom_fields: [
                     { key: 'رقم المعدة', value: '' },
-                    { key: 'اسم المعدة (النوع)', value: '' },
+                    { key: 'اسم المعدة (النوع)', value: 'شاحنة' },
                 ]
             });
         }
@@ -235,19 +235,29 @@ const VehiclesPage = () => {
             });
 
             const vehicleData = {
-                plate_number: fieldsMap['رقم المعدة'] || '',
-                equipment_name: fieldsMap['اسم المعدة (النوع)'] || '',
-                vehicle_type: fieldsMap['اسم المعدة (النوع)'] || 'شاحنة',
-                manufacturer: fieldKeys.has('التصنيع (الشركة المصنعة)') ? (fieldsMap['التصنيع (الشركة المصنعة)'] || '') : null,
-                model: fieldKeys.has('الموديل (الطراز)') ? (fieldsMap['الموديل (الطراز)'] || '') : null,
+                plate_number: fieldsMap['رقم المعدة']?.trim() || '',
+                equipment_name: fieldsMap['اسم المعدة (النوع)']?.trim() || '',
+                vehicle_type: fieldsMap['اسم المعدة (النوع)']?.trim() || 'شاحنة',
+                manufacturer: fieldKeys.has('التصنيع (الشركة المصنعة)') ? (fieldsMap['التصنيع (الشركة المصنعة)']?.trim() || null) : null,
+                model: fieldKeys.has('الموديل (الطراز)') ? (fieldsMap['الموديل (الطراز)']?.trim() || null) : null,
                 year: fieldKeys.has('سنة الموديل') ? (parseInt(fieldsMap['سنة الموديل']) || new Date().getFullYear()) : new Date().getFullYear(),
                 current_km: fieldKeys.has('المسافة المقطوعة (كم)') ? (parseInt(fieldsMap['المسافة المقطوعة (كم)']) || 0) : 0,
-                fuel_type: fieldKeys.has('نوع الوقود') ? (fieldsMap['نوع الوقود'] || 'ديزل') : null,
+                fuel_type: fieldKeys.has('نوع الوقود') ? (fieldsMap['نوع الوقود']?.trim() || null) : null,
                 status: (fieldsMap['حالة المعدة'] as any) || 'active',
                 image_url: formData.image_url || ''
             };
 
+            // Validation: رقم المعدة is required
+            if (!vehicleData.plate_number || vehicleData.plate_number.trim() === '') {
+                toast.error('يرجى إدخال رقم المعدة');
+                return;
+            }
 
+            // Validation: نوع المعدة is required
+            if (!vehicleData.vehicle_type || vehicleData.vehicle_type.trim().length < 2) {
+                toast.error('يرجى إدخال نوع المعدة (على الأقل حرفين)');
+                return;
+            }
 
             if (editingVehicle) {
                 await vehiclesService.update(editingVehicle.id, vehicleData);
@@ -259,7 +269,9 @@ const VehiclesPage = () => {
             setIsModalOpen(false); // Always close modal after successful save
             await fetchVehicles(1);
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'حدث خطأ أثناء حفظ البيانات');
+            console.error('Vehicle save error:', err);
+            const errorMessage = err.response?.data?.message || err.message || 'حدث خطأ أثناء حفظ البيانات';
+            toast.error(errorMessage);
         }
     };
 
