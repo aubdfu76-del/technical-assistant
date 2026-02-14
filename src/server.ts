@@ -216,6 +216,16 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_media' AND column_name='thumbnail_url') THEN
                     ALTER TABLE diagnosis_media ADD COLUMN thumbnail_url TEXT;
                 END IF;
+
+                -- CRITICAL FIX: Add 'type' column if missing (Error observed: column "type" does not exist)
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_media' AND column_name='type') THEN
+                    ALTER TABLE diagnosis_media ADD COLUMN type VARCHAR(50) DEFAULT 'image';
+                END IF;
+
+                -- Add 'url' column if missing just in case
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_media' AND column_name='url') THEN
+                    ALTER TABLE diagnosis_media ADD COLUMN url TEXT;
+                END IF;
             END
             $$;
         `);
