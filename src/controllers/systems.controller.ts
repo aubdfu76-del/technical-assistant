@@ -329,9 +329,13 @@ export const addDiagnosisMedia = async (req: Request, res: Response) => {
             message: 'تم إضافة الوسائط بنجاح',
             data: result.rows[0]
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ Add diagnosis media error:', error);
-        res.status(500).json({ success: false, message: 'حدث خطأ أثناء إضافة الوسائط' });
+        res.status(500).json({
+            success: false,
+            message: 'Media DB Error: ' + (error.message || error.detail || JSON.stringify(error)),
+            error_details: error
+        });
     }
 };
 

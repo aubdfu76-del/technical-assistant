@@ -201,6 +201,21 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tasks' AND column_name='workshop_requirements') THEN
                     ALTER TABLE repair_tasks ADD COLUMN workshop_requirements TEXT;
                 END IF;
+
+                -- CREATE DIAGNOSIS MEDIA TABLE IF NOT EXISTS
+                CREATE TABLE IF NOT EXISTS diagnosis_media (
+                    id SERIAL PRIMARY KEY,
+                    item_id INTEGER REFERENCES diagnosis_items(id) ON DELETE CASCADE,
+                    type VARCHAR(50) NOT NULL,
+                    url TEXT NOT NULL,
+                    thumbnail_url TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+
+                -- Add thumbnail_url to diagnosis_media if missing (for existing tables)
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_media' AND column_name='thumbnail_url') THEN
+                    ALTER TABLE diagnosis_media ADD COLUMN thumbnail_url TEXT;
+                END IF;
             END
             $$;
         `);
