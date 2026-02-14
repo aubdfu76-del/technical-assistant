@@ -257,9 +257,14 @@ export const createDiagnosisItem = async (req: Request, res: Response) => {
             message: 'تم إضافة إجراء التشخيص بنجاح',
             data: result.rows[0]
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ Create diagnosis item error:', error);
-        res.status(500).json({ success: false, message: 'حدث خطأ أثناء إضافة الإجراء' });
+        // RETURN THE ACTUAL ERROR for debugging
+        res.status(500).json({
+            success: false,
+            message: 'DB Error: ' + (error.message || error.detail || JSON.stringify(error)),
+            error_details: error
+        });
     }
 };
 

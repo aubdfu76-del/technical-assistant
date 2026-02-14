@@ -204,6 +204,37 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
 });
 
 // ============================================
+// INSPECT DB SCHEMA (DIAGNOSTIC TOOL)
+// ============================================
+app.get('/inspect-db-schema', async (req: Request, res: Response) => {
+    try {
+        const pool = getPool();
+
+        // Check diagnosis_items columns
+        const diagItems = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'diagnosis_items'
+        `);
+
+        // Check repair_tasks columns
+        const repairTasks = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'repair_tasks'
+        `);
+
+        res.json({
+            success: true,
+            diagnosis_items_columns: diagItems.rows.map(r => r.column_name),
+            repair_tasks_columns: repairTasks.rows.map(r => r.column_name)
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============================================
 // Middleware
 // ============================================
 app.use(helmet({
