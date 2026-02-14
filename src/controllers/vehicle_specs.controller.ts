@@ -43,6 +43,34 @@ export const upsertVehicleSpecs = async (req: Request, res: Response) => {
         console.log('📝 Saving specs for vehicle:', id);
         console.log('📝 Specs data:', JSON.stringify(specs, null, 2));
 
+        // Check if vehicle exists
+        const vehicleCheck = await pool.query(
+            'SELECT id FROM vehicles WHERE id = $1',
+            [id]
+        );
+
+        if (vehicleCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'المعدة غير موجودة',
+            });
+        }
+
+        // Clean and validate custom_specs
+        let cleanCustomSpecs: any[] = [];
+        if (specs.custom_specs && Array.isArray(specs.custom_specs)) {
+            cleanCustomSpecs = specs.custom_specs
+                .filter((spec: any) => spec && spec.key && spec.value)
+                .map((spec: any) => ({
+                    key: String(spec.key || '').trim(),
+                    value: String(spec.value || '').trim(),
+                    category: spec.category ? String(spec.category).trim() : 'مواصفات عامة'
+                }))
+                .filter((spec: any) => spec.key && spec.value);
+        }
+
+        console.log('📝 Cleaned custom_specs:', cleanCustomSpecs);
+
         // Check if specs exist
         const check = await pool.query(
             'SELECT id FROM vehicle_specifications WHERE vehicle_id = $1',
@@ -70,7 +98,7 @@ export const upsertVehicleSpecs = async (req: Request, res: Response) => {
                 specs.transmission_type ?? null,
                 specs.fuel_tank_capacity ?? null, specs.oil_capacity ?? null,
                 specs.tire_size ?? null, specs.tire_pressure_psi ?? null, specs.battery_voltage ?? null,
-                JSON.stringify(specs.custom_specs || [])
+                JSON.stringify(cleanCustomSpecs)
             ];
         } else {
             // Update
@@ -92,7 +120,7 @@ export const upsertVehicleSpecs = async (req: Request, res: Response) => {
                 specs.transmission_type ?? null,
                 specs.fuel_tank_capacity ?? null, specs.oil_capacity ?? null,
                 specs.tire_size ?? null, specs.tire_pressure_psi ?? null, specs.battery_voltage ?? null,
-                JSON.stringify(specs.custom_specs || [])
+                JSON.stringify(cleanCustomSpecs)
             ];
         }
 
@@ -101,14 +129,16 @@ export const upsertVehicleSpecs = async (req: Request, res: Response) => {
         res.json({
             success: true,
             data: result.rows[0],
-            message: 'Vehicle specifications saved successfully'
+            message: 'تم حفظ مواصفات المعدة بنجاح'
         });
+
+        console.log('✅ Vehicle specs saved successfully for vehicle ID:', id);
 
     } catch (error: any) {
         console.error('❌ Upsert vehicle specs error:', error.message, error.stack);
         res.status(500).json({
             success: false,
-            message: 'Error saving vehicle specifications: ' + error.message,
+            message: 'حدث خطأ أثناء حفظ المواصفات: ' + error.message,
         });
     }
 };

@@ -292,6 +292,13 @@ const UsersPage = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate password for new users
+        if (!editingUser && (!formData.password || formData.password.length < 8)) {
+            toast.error('كلمة المرور مطلوبة ويجب أن تكون 8 أحرف على الأقل');
+            return;
+        }
+
         const payload = { ...formData, unit_id: unitId || null };
         console.log('Submitting user payload:', payload);
 

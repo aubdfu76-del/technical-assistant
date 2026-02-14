@@ -4,9 +4,8 @@ import { authenticate, authorize } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
-// Only admins and supervisors can access dashboard data
+// All authenticated users can access dashboard data
 router.use(authenticate);
-router.use(authorize('admin', 'supervisor'));
 
 /**
  * @route GET /api/dashboard/stats

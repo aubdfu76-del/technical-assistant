@@ -82,36 +82,72 @@ export const getRepairTasks = async (req: Request, res: Response) => {
 export const getRepairTaskDetails = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+
+        console.log('📝 Fetching repair task details for ID:', id);
+
+        // Validate ID
+        if (!id || isNaN(Number(id))) {
+            console.log('❌ Invalid task ID:', id);
+            return res.status(400).json({
+                success: false,
+                message: 'معرف المهمة غير صالح'
+            });
+        }
+
         const pool = getPool();
 
+        // Get task
         const taskResult = await pool.query('SELECT * FROM repair_tasks WHERE id = $1', [id]);
+        console.log('📊 Task query result:', taskResult.rows.length, 'rows');
+
         if (taskResult.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'مهمة الإصلاح غير موجودة' });
+            console.log('❌ Task not found for ID:', id);
+            return res.status(404).json({
+                success: false,
+                message: 'مهمة الإصلاح غير موجودة'
+            });
         }
 
         // Get steps and their media
         const stepsResult = await pool.query(`
             SELECT s.*, 
-                   (SELECT json_agg(m.*) FROM repair_media m WHERE m.step_id = s.id) as media
+                   (SELECT json_agg(m.*) FROM repair_media m WHERE m.step_id = s.id ORDER BY m.order_index ASC, m.id ASC) as media
             FROM repair_steps s
             WHERE s.task_id = $1
             ORDER BY s.step_number ASC
         `, [id]);
+        console.log('📊 Steps query result:', stepsResult.rows.length, 'steps');
 
         // Get task-level media
-        const taskMediaResult = await pool.query('SELECT * FROM repair_media WHERE task_id = $1 AND step_id IS NULL ORDER BY order_index ASC, id ASC', [id]);
+        const taskMediaResult = await pool.query(
+            'SELECT * FROM repair_media WHERE task_id = $1 AND step_id IS NULL ORDER BY order_index ASC, id ASC',
+            [id]
+        );
+        console.log('📊 Task media query result:', taskMediaResult.rows.length, 'media items');
+
+        const responseData = {
+            ...taskResult.rows[0],
+            steps: stepsResult.rows || [],
+            taskMedia: taskMediaResult.rows || []
+        };
+
+        console.log('✅ Successfully fetched repair task details for ID:', id);
 
         res.json({
             success: true,
-            data: {
-                ...taskResult.rows[0],
-                steps: stepsResult.rows,
-                taskMedia: taskMediaResult.rows || []
-            }
+            data: responseData
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ Get repair task details error:', error);
-        res.status(500).json({ success: false, message: 'حدث خطأ أثناء جلب تفاصيل حزمة الإصلاح' });
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail
+        });
+        res.status(500).json({
+            success: false,
+            message: 'حدث خطأ أثناء جلب تفاصيل حزمة الإصلاح: ' + error.message
+        });
     }
 };
 

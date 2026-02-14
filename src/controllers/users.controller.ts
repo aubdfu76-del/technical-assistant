@@ -173,6 +173,16 @@ export const createUser = async (req: Request, res: Response) => {
     try {
         const { employee_id, full_name, email, password, role, phone, unit_id } = req.body;
 
+        console.log('📝 Create User Request:', {
+            employee_id,
+            full_name,
+            email,
+            role,
+            phone,
+            unit_id,
+            password_length: password?.length
+        });
+
         const pool = getPool();
 
         // Check if employee_id already exists
@@ -201,6 +211,14 @@ export const createUser = async (req: Request, res: Response) => {
                     message: 'البريد الإلكتروني مستخدم بالفعل',
                 });
             }
+        });
+
+        // Validate password exists
+        if (!password || password.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'كلمة المرور مطلوبة',
+            });
         }
 
         // Hash password
@@ -223,6 +241,11 @@ export const createUser = async (req: Request, res: Response) => {
         console.log(`✅ Created user: ${employee_id} (${role || 'technician'})`);
     } catch (error: any) {
         console.error('❌ Create user error:', error);
+        console.error('❌ Error details:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
 
         if (error.code === '23505') { // Unique violation
             return res.status(409).json({
@@ -233,7 +256,7 @@ export const createUser = async (req: Request, res: Response) => {
 
         res.status(500).json({
             success: false,
-            message: 'حدث خطأ أثناء إنشاء المستخدم',
+            message: 'حدث خطأ أثناء إنشاء المستخدم: ' + error.message,
         });
     }
 };

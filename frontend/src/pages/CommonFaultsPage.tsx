@@ -77,7 +77,8 @@ const AddCommonFaultModal = ({ onClose, onRefresh }: any) => {
             onClose();
         } catch (err: any) {
             console.error(err);
-            toast.error(err.message || 'فشل في إضافة العطل');
+            const errorMessage = err.response?.data?.message || err.message || 'فشل في إضافة العطل';
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }

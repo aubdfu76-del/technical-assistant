@@ -73,14 +73,6 @@ export const createDiagnosisSystem = async (req: Request, res: Response) => {
         const { name, description, icon_name, vehicle_ids } = req.body;
         console.log('📝 Received create system request:', { name, description, icon_name, vehicle_ids });
 
-        // Log to file for debugging
-        const logData = `${new Date().toISOString()} - Request: ${JSON.stringify(req.body)}\n`;
-        try {
-            fs.appendFileSync(path.join(process.cwd(), 'server_debug.log'), logData);
-        } catch (e) {
-            console.error('Failed to write log', e);
-        }
-
         const pool = getPool();
         const vIds = Array.isArray(vehicle_ids) ? vehicle_ids : [];
         const currentUser = (req as any).user;
@@ -98,15 +90,30 @@ export const createDiagnosisSystem = async (req: Request, res: Response) => {
             }
         }
 
-        // Check if exists
-        // Note: With vehicle isolation, duplicate names might be allowed if they serve different vehicles?
-        // But for now, let's keep name unique globally to avoid confusion, or check unique per vehicle?
-        // User didn't specify, stick to simple unique name check for now (or skip it if we want flexibility).
-        const check = await pool.query('SELECT id FROM diagnosis_systems WHERE name = $1', [name]);
-        if (check.rows.length > 0) {
-            // If existing system, maybe they want to link it?
-            // For now, fail like before.
-            return res.status(409).json({ success: false, message: 'اسم النظام موجود بالفعل' });
+        // Check if exists with same name AND overlapping vehicles
+        // Allow same name if vehicles are different (e.g., "نظام الهيدروليك" for different equipment types)
+        const check = await pool.query(
+            `SELECT id, vehicle_ids FROM diagnosis_systems WHERE name = $1`,
+            [name]
+        );
+
+        if (check.rows.length > 0 && vIds.length > 0) {
+            // Check if there's overlap in vehicle_ids
+            const existingVehicleIds = check.rows[0].vehicle_ids || [];
+            const hasOverlap = vIds.some((vid: number) => existingVehicleIds.includes(vid));
+
+            if (hasOverlap) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'يوجد نظام بنفس الاسم لإحدى المركبات المختارة. يرجى اختيار اسم مختلف أو مركبات مختلفة.'
+                });
+            }
+        } else if (check.rows.length > 0 && vIds.length === 0) {
+            // If no vehicles specified, don't allow duplicate names
+            return res.status(409).json({
+                success: false,
+                message: 'اسم النظام موجود بالفعل. يرجى اختيار اسم مختلف.'
+            });
         }
 
         const result = await pool.query(
@@ -121,12 +128,6 @@ export const createDiagnosisSystem = async (req: Request, res: Response) => {
             data: result.rows[0]
         });
     } catch (error: any) {
-        // Log detailed error to file
-        const errorLog = `${new Date().toISOString()} - Error: ${error.message}\nStack: ${error.stack}\n`;
-        try {
-            fs.appendFileSync(path.join(process.cwd(), 'server_debug.log'), errorLog);
-        } catch (e) { /* ignore */ }
-
         console.error('❌ Create diagnosis system error:', error);
         res.status(500).json({ success: false, message: 'حدث خطأ أثناء إضافة النظام: ' + error.message });
     }

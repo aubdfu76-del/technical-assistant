@@ -155,6 +155,24 @@ export const createVehicle = async (req: Request, res: Response) => {
             notes,
         } = req.body;
 
+        console.log('📝 Create vehicle request received:', {
+            plate_number,
+            equipment_name,
+            vehicle_type,
+            model,
+            manufacturer,
+            year
+        });
+
+        // Validation: plate_number is required
+        if (!plate_number || plate_number.trim() === '') {
+            console.log('❌ Validation failed: plate_number is empty');
+            return res.status(400).json({
+                success: false,
+                message: 'رقم المعدة مطلوب',
+            });
+        }
+
         const pool = getPool();
 
         // Check if plate_number already exists
@@ -164,6 +182,7 @@ export const createVehicle = async (req: Request, res: Response) => {
         );
 
         if (existingVehicle.rows.length > 0) {
+            console.log('❌ Duplicate plate_number:', plate_number);
             return res.status(409).json({
                 success: false,
                 message: 'رقم المعدة مستخدم بالفعل',
@@ -205,6 +224,11 @@ export const createVehicle = async (req: Request, res: Response) => {
         console.log(`✅ Created vehicle: ${plate_number} (${vehicle_type})`);
     } catch (error: any) {
         console.error('❌ Create vehicle error:', error);
+        console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            detail: error.detail
+        });
 
         if (error.code === '23505') { // Unique violation
             return res.status(409).json({
@@ -213,9 +237,18 @@ export const createVehicle = async (req: Request, res: Response) => {
             });
         }
 
+        // More detailed error message
+        let errorMessage = 'حدث خطأ أثناء إنشاء المعدة';
+        if (error.code === '23502') { // NOT NULL violation
+            errorMessage = 'بعض الحقول المطلوبة فارغة';
+        } else if (error.code === '22P02') { // Invalid input syntax
+            errorMessage = 'صيغة البيانات المدخلة غير صحيحة';
+        }
+
         res.status(500).json({
             success: false,
-            message: 'حدث خطأ أثناء إنشاء المعدة',
+            message: errorMessage,
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };

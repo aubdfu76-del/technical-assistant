@@ -482,17 +482,47 @@ const RepairWorkPackagePage = () => {
         setLoading(true);
         setError(null);
         try {
+            console.log('📝 Fetching repair task data for ID:', taskId);
+
+            if (!taskId) {
+                console.log('❌ No task ID provided');
+                setError('لم يتم تحديد معرف المهمة');
+                setLoading(false);
+                return;
+            }
+
             if (taskId) {
                 const response = await repairService.getTaskDetails(Number(taskId));
+                console.log('📊 Repair task response:', response);
+
                 if (response && response.success && response.data) {
+                    console.log('✅ Task data loaded successfully');
                     setTask(response.data);
                 } else {
+                    console.log('❌ Invalid response structure:', response);
                     setError('لم يتم العثور على بيانات مهمة الإصلاح');
                 }
             }
         } catch (err: any) {
             console.error('❌ Fetch repair task error:', err);
-            setError('حدث خطأ أثناء تحميل المهمة. يرجى المحاولة مرة أخرى.');
+            console.error('Error details:', {
+                message: err.message,
+                response: err.response?.data,
+                status: err.response?.status
+            });
+
+            // More specific error messages
+            let errorMessage = 'حدث خطأ أثناء تحميل الصفحة، يرجى المحاولة مرة أخرى.';
+
+            if (err.response?.status === 404) {
+                errorMessage = 'مهمة الإصلاح غير موجودة';
+            } else if (err.response?.status === 400) {
+                errorMessage = 'معرف المهمة غير صالح';
+            } else if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            }
+
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

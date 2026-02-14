@@ -10,8 +10,8 @@ export const createUserValidation = [
         .withMessage('رقم الموظف مطلوب')
         .isLength({ min: 2, max: 50 })
         .withMessage('رقم الموظف يجب أن يكون بين 2 و 50 حرف')
-        .matches(/^[a-zA-Z0-9_-]+$/)
-        .withMessage('رقم الموظف يجب أن يحتوي على أحرف إنجليزية، أرقام، شرطات، أو شرطات سفلية فقط'),
+        .matches(/^[\u0600-\u06FFa-zA-Z0-9_\-\s]+$/)
+        .withMessage('رقم الموظف يجب أن يحتوي على أحرف عربية أو إنجليزية، أرقام، شرطات، أو مسافات فقط'),
 
     body('full_name')
         .trim()
@@ -45,8 +45,8 @@ export const updateUserValidation = [
         .trim()
         .isLength({ min: 2, max: 50 })
         .withMessage('رقم الموظف يجب أن يكون بين 2 و 50 حرف')
-        .matches(/^[a-zA-Z0-9_-]+$/)
-        .withMessage('رقم الموظف يجب أن يحتوي على أحرف إنجليزية، أرقام، شرطات، أو شرطات سفلية فقط'),
+        .matches(/^[\u0600-\u06FFa-zA-Z0-9_\-\s]+$/)
+        .withMessage('رقم الموظف يجب أن يحتوي على أحرف عربية أو إنجليزية، أرقام، شرطات، أو مسافات فقط'),
 
     body('full_name')
         .optional()

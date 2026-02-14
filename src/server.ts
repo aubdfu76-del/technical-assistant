@@ -273,6 +273,55 @@ app.get('/api', (req: Request, res: Response) => {
 });
 
 // ============================================
+// Serve Frontend Static Files (Production)
+// ============================================
+// Serve static files from frontend/dist
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+console.log('📁 Frontend dist path:', frontendDistPath);
+console.log('📁 Frontend dist exists:', fs.existsSync(frontendDistPath));
+
+if (fs.existsSync(frontendDistPath)) {
+    // Serve static assets (JS, CSS, images, etc.)
+    app.use(express.static(frontendDistPath, {
+        maxAge: '1d', // Cache static assets for 1 day
+        etag: true,
+        lastModified: true,
+        setHeaders: (res, filePath) => {
+            // Set proper MIME types
+            if (filePath.endsWith('.js')) {
+                res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+            } else if (filePath.endsWith('.css')) {
+                res.setHeader('Content-Type', 'text/css; charset=utf-8');
+            } else if (filePath.endsWith('.html')) {
+                res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            }
+        }
+    }));
+
+    // SPA fallback: serve index.html for all non-API routes
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+        // Skip API routes
+        if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/health') || req.path.startsWith('/setup-db-force')) {
+            return next();
+        }
+
+        // Serve index.html for all other routes (SPA routing)
+        const indexPath = path.join(frontendDistPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            console.log('❌ index.html not found at:', indexPath);
+            next();
+        }
+    });
+
+    console.log('✅ Frontend static files configured from:', frontendDistPath);
+} else {
+    console.log('⚠️ Frontend dist folder not found. Run "npm run build" in frontend directory.');
+    console.log('⚠️ Expected path:', frontendDistPath);
+}
+
+// ============================================
 // 404 Handler
 // ============================================
 app.use((req: Request, res: Response) => {
