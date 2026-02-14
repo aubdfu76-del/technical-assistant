@@ -111,12 +111,35 @@ app.get('/setup-db-force', async (req: Request, res: Response) => {
             }
         });
 
+
     } catch (error: any) {
         res.status(500).json({
             success: false,
             error: error.message,
             stack: error.stack
         });
+    }
+});
+
+// ============================================
+// FIX DB SCHEMA ROUTE (Temporary)
+// ============================================
+app.get('/fix-users-schema', async (req: Request, res: Response) => {
+    try {
+        const pool = getPool();
+        await pool.query(`
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='unit_id') THEN
+                    ALTER TABLE users ADD COLUMN unit_id INTEGER REFERENCES units(id) ON DELETE SET NULL;
+                END IF;
+            END
+            $$;
+        `);
+
+        res.json({ success: true, message: "Checked and added unit_id column to users table if missing." });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
