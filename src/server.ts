@@ -185,6 +185,14 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='required_tools') THEN
                     ALTER TABLE diagnosis_items ADD COLUMN required_tools TEXT;
                 END IF;
+                
+                -- CRITICAL MISSING COLUMNS FIXED HERE:
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='estimated_time') THEN
+                    ALTER TABLE diagnosis_items ADD COLUMN estimated_time INTEGER DEFAULT 30;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='work_package_content') THEN
+                    ALTER TABLE diagnosis_items ADD COLUMN work_package_content TEXT;
+                END IF;
 
                 -- Add extra Work Package columns to repair_tasks
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tasks' AND column_name='safety_procedures') THEN
