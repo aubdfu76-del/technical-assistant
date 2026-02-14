@@ -130,14 +130,19 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
         await pool.query(`
             DO $$
             BEGIN
+                -- Add unit_id column if not exists
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='unit_id') THEN
                     ALTER TABLE users ADD COLUMN unit_id INTEGER REFERENCES units(id) ON DELETE SET NULL;
                 END IF;
+
+                -- Update role check constraint to include 'trainer'
+                ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+                ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'supervisor', 'technician', 'trainer'));
             END
             $$;
         `);
 
-        res.json({ success: true, message: "Checked and added unit_id column to users table if missing." });
+        res.json({ success: true, message: "Fixed DB Schema: Added unit_id column and updated role constraint to include 'trainer'." });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }
