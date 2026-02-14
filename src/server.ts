@@ -172,6 +172,25 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tasks' AND column_name='technicians_count') THEN
                     ALTER TABLE repair_tasks ADD COLUMN technicians_count INTEGER DEFAULT 1;
                 END IF;
+
+                -- Add extra Work Package columns to diagnosis_items
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='safety_procedures') THEN
+                    ALTER TABLE diagnosis_items ADD COLUMN safety_procedures TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='workshop_requirements') THEN
+                    ALTER TABLE diagnosis_items ADD COLUMN workshop_requirements TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='required_tools') THEN
+                    ALTER TABLE diagnosis_items ADD COLUMN required_tools TEXT;
+                END IF;
+
+                -- Add extra Work Package columns to repair_tasks
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tasks' AND column_name='safety_procedures') THEN
+                    ALTER TABLE repair_tasks ADD COLUMN safety_procedures TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tasks' AND column_name='workshop_requirements') THEN
+                    ALTER TABLE repair_tasks ADD COLUMN workshop_requirements TEXT;
+                END IF;
             END
             $$;
         `);
