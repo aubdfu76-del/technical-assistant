@@ -163,6 +163,15 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='maintenance_sections' AND column_name='vehicle_ids') THEN
                     ALTER TABLE maintenance_sections ADD COLUMN vehicle_ids INTEGER[];
                 END IF;
+
+                -- Add technicians_count checks
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='technicians_count') THEN
+                    ALTER TABLE diagnosis_items ADD COLUMN technicians_count INTEGER DEFAULT 1;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tasks' AND column_name='technicians_count') THEN
+                    ALTER TABLE repair_tasks ADD COLUMN technicians_count INTEGER DEFAULT 1;
+                END IF;
             END
             $$;
         `);
