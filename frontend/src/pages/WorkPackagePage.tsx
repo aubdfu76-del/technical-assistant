@@ -402,9 +402,11 @@ const EditWorkPackageModal = ({ item, onClose, onRefresh }: { item: DiagnosisIte
             toast.success('تم تحديث حزمة العمل بنجاح');
             onRefresh();
             onClose();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            toast.error('فشل في حفظ التعديلات');
+            // Show detailed error from backend
+            const errorMsg = err.response?.data?.message || err.message || 'فشل في حفظ التعديلات';
+            toast.error(errorMsg);
         } finally {
             setLoading(false);
         }
