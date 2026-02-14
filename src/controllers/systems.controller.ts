@@ -297,9 +297,14 @@ export const updateDiagnosisItem = async (req: Request, res: Response) => {
             message: 'تم تحديث حزمة العمل بنجاح',
             data: result.rows[0]
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ Update diagnosis item error:', error);
-        res.status(500).json({ success: false, message: 'حدث خطأ أثناء تحديث حزمة العمل' });
+        // RETURN DETAILED ERROR for debugging
+        res.status(500).json({
+            success: false,
+            message: 'Update DB Error: ' + (error.message || error.detail || JSON.stringify(error)),
+            error_details: error
+        });
     }
 };
 
