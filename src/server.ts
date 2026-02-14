@@ -143,11 +143,31 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_systems' AND column_name='vehicle_ids') THEN
                     ALTER TABLE diagnosis_systems ADD COLUMN vehicle_ids INTEGER[];
                 END IF;
+
+                -- Add vehicle_ids to diagnosis_items if not exists
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_items' AND column_name='vehicle_ids') THEN
+                    ALTER TABLE diagnosis_items ADD COLUMN vehicle_ids INTEGER[];
+                END IF;
+
+                -- Add vehicle_ids to repair_tasks if not exists
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_tasks' AND column_name='vehicle_ids') THEN
+                    ALTER TABLE repair_tasks ADD COLUMN vehicle_ids INTEGER[];
+                END IF;
+
+                -- Add vehicle_ids to common_faults if not exists
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='common_faults' AND column_name='vehicle_ids') THEN
+                    ALTER TABLE common_faults ADD COLUMN vehicle_ids INTEGER[];
+                END IF;
+
+                -- Add vehicle_ids to maintenance_sections if not exists
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='maintenance_sections' AND column_name='vehicle_ids') THEN
+                    ALTER TABLE maintenance_sections ADD COLUMN vehicle_ids INTEGER[];
+                END IF;
             END
             $$;
         `);
 
-        res.json({ success: true, message: "Fixed DB Schema: Added unit_id to users, vehicle_ids to diagnosis_systems, and updated role constraint." });
+        res.json({ success: true, message: "Fixed DB Schema: Added vehicle_ids across all modules (diagnosis, repair, faults)." });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }
