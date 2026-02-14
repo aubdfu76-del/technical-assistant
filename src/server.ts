@@ -226,6 +226,18 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_media' AND column_name='url') THEN
                     ALTER TABLE diagnosis_media ADD COLUMN url TEXT;
                 END IF;
+
+                -- FIX for Repair Work Package: Add order_index to repair_media
+                -- Check if repair_media table exists first (it should)
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='repair_media') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_media' AND column_name='order_index') THEN
+                        ALTER TABLE repair_media ADD COLUMN order_index INTEGER DEFAULT 0;
+                    END IF;
+                     -- Also ensure type and url exist in repair_media as well, just to be safe
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='repair_media' AND column_name='type') THEN
+                        ALTER TABLE repair_media ADD COLUMN type VARCHAR(50) DEFAULT 'image';
+                    END IF;
+                END IF;
             END
             $$;
         `);
