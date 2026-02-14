@@ -138,11 +138,16 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                 -- Update role check constraint to include 'trainer'
                 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
                 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'supervisor', 'technician', 'trainer'));
+
+                -- Add vehicle_ids to diagnosis_systems if not exists
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='diagnosis_systems' AND column_name='vehicle_ids') THEN
+                    ALTER TABLE diagnosis_systems ADD COLUMN vehicle_ids INTEGER[];
+                END IF;
             END
             $$;
         `);
 
-        res.json({ success: true, message: "Fixed DB Schema: Added unit_id column and updated role constraint to include 'trainer'." });
+        res.json({ success: true, message: "Fixed DB Schema: Added unit_id to users, vehicle_ids to diagnosis_systems, and updated role constraint." });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }
