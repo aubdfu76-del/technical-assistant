@@ -111,7 +111,14 @@ export const getRepairTaskDetails = async (req: Request, res: Response) => {
         // Get steps and their media
         const stepsResult = await pool.query(`
             SELECT s.*, 
-                   (SELECT json_agg(m.*) FROM repair_media m WHERE m.step_id = s.id ORDER BY m.order_index ASC, m.id ASC) as media
+                   COALESCE(
+                       (
+                           SELECT json_agg(m ORDER BY m.order_index ASC, m.id ASC)
+                           FROM repair_media m 
+                           WHERE m.step_id = s.id
+                       ), 
+                       '[]'::json
+                   ) as media
             FROM repair_steps s
             WHERE s.task_id = $1
             ORDER BY s.step_number ASC
