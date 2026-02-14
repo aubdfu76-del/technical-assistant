@@ -29,9 +29,16 @@ import { toast } from 'react-hot-toast';
 
 const getFullUrl = (url: string) => {
     if (!url) return '';
-    if (url.startsWith('http')) return url;
-    return `${SERVER_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+
+    // Clean up double slashes just in case
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${SERVER_URL}${cleanUrl}`;
 };
+
+// ... inside EditRepairWorkPackageModal ...
+
+// (Removed dead code)
 
 const MediaGallery = ({ media, onDelete, onReorder, canEdit }: {
     media: any[],
@@ -427,9 +434,14 @@ const EditRepairWorkPackageModal = ({ task, onClose, onRefresh }: { task: Repair
                             {task.taskMedia?.map((m, idx) => (
                                 <div key={`task-${idx}`} style={{ position: 'relative', width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                                     {(m.type === 'video' || m.media_type === 'video') ? (
-                                        <video src={m.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <video src={getFullUrl(m.url)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
-                                        <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img
+                                            src={getFullUrl(m.url)}
+                                            alt=""
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=Error'; }}
+                                        />
                                     )}
                                     <div style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.6)', borderRadius: '6px', padding: '4px', backdropFilter: 'blur(4px)' }}>
                                         {(m.type === 'video' || m.media_type === 'video') ? <Film size={12} color="#fff" /> : <ImageIcon size={12} color="#fff" />}
@@ -441,9 +453,14 @@ const EditRepairWorkPackageModal = ({ task, onClose, onRefresh }: { task: Repair
                             {task.steps?.flatMap(s => s.media || []).map((m, idx) => (
                                 <div key={`step-${idx}`} style={{ position: 'relative', width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--glass-border)', opacity: 0.8 }}>
                                     {(m.type === 'video' || m.media_type === 'video') ? (
-                                        <video src={m.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <video src={getFullUrl(m.url)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
-                                        <img src={m.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img
+                                            src={getFullUrl(m.url)}
+                                            alt=""
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=Error'; }}
+                                        />
                                     )}
                                     <div style={{ position: 'absolute', bottom: 5, left: 5, background: 'rgba(255,255,255,0.2)', borderRadius: '4px', padding: '2px 6px' }}>
                                         <span style={{ fontSize: '10px', color: '#fff' }}>خطوة</span>
@@ -463,7 +480,7 @@ const EditRepairWorkPackageModal = ({ task, onClose, onRefresh }: { task: Repair
 
                 </div>
             </motion.div>
-        </motion.div>
+        </motion.div >
     );
 };
 
