@@ -154,9 +154,11 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                     ALTER TABLE repair_tasks ADD COLUMN vehicle_ids INTEGER[];
                 END IF;
 
-                -- Add vehicle_ids to common_faults if not exists
-                IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='common_faults' AND column_name='vehicle_ids') THEN
-                    ALTER TABLE common_faults ADD COLUMN vehicle_ids INTEGER[];
+                -- Add vehicle_ids to common_faults ONLY IF TABLE EXISTS
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='common_faults') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='common_faults' AND column_name='vehicle_ids') THEN
+                        ALTER TABLE common_faults ADD COLUMN vehicle_ids INTEGER[];
+                    END IF;
                 END IF;
 
                 -- Add vehicle_ids to maintenance_sections if not exists
