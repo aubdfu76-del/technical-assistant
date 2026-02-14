@@ -211,7 +211,7 @@ export const createUser = async (req: Request, res: Response) => {
                     message: 'البريد الإلكتروني مستخدم بالفعل',
                 });
             }
-        });
+        }
 
         // Validate password exists
         if (!password || password.trim().length === 0) {
