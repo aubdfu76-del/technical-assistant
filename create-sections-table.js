@@ -20,6 +20,7 @@ async function createSectionsTable() {
                 icon VARCHAR(50) NOT NULL,
                 color VARCHAR(20) NOT NULL,
                 description TEXT,
+                vehicle_ids INTEGER[],
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
