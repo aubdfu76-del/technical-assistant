@@ -2,7 +2,9 @@ import express from 'express';
 import {
     getCommonFaults,
     getCommonFaultDetails,
+
     createCommonFault,
+    updateCommonFault,
     deleteCommonFault
 } from '../controllers/diagnosis.controller';
 import { authenticate, authorize } from '../middleware/auth.middleware';
@@ -27,7 +29,14 @@ router.get('/common/:id', getCommonFaultDetails);
  * @route POST /api/diagnosis/common
  * @desc Add new common fault (Admins and Supervisors only)
  */
-router.post('/common', authorize('admin', 'supervisor'), createCommonFault);
-router.delete('/common/:id', authorize('admin', 'supervisor'), deleteCommonFault); // New Delete Route
+router.post('/common', authorize('admin', 'supervisor', 'trainer'), createCommonFault);
+
+/**
+ * @route PUT /api/diagnosis/common/:id
+ * @desc Update common fault (Admins, Supervisors, Trainers)
+ */
+router.put('/common/:id', authorize('admin', 'supervisor', 'trainer'), updateCommonFault);
+
+router.delete('/common/:id', authorize('admin', 'supervisor', 'trainer'), deleteCommonFault); // New Delete Route
 
 export default router;
