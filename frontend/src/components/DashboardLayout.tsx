@@ -53,6 +53,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                             <Bell size={20} color="var(--color-text-muted)" />
                         </div>
 
+
                         {selectedEquipment && (
                             <div
                                 onClick={() => navigate('/select-equipment')}
@@ -62,8 +63,8 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                                     gap: '12px',
                                     padding: '8px 16px',
                                     borderRadius: '14px',
-                                    background: 'rgba(59, 130, 246, 0.05)',
-                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                    background: 'rgba(6, 182, 212, 0.05)',
+                                    border: '1px solid rgba(6, 182, 212, 0.2)',
                                     cursor: 'pointer'
                                 }}
                             >
@@ -71,12 +72,12 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                                     width: '32px',
                                     height: '32px',
                                     borderRadius: '8px',
-                                    background: 'rgba(59, 130, 246, 0.1)',
+                                    background: 'rgba(6, 182, 212, 0.1)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center'
                                 }}>
-                                    <Car size={18} color="#3b82f6" />
+                                    <Car size={18} color="var(--color-primary)" />
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: 1 }}>المعدة النشطة</p>
@@ -89,8 +90,8 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         <div style={{
                             padding: '6px 16px',
                             borderRadius: '14px',
-                            background: 'rgba(59, 130, 246, 0.05)',
-                            border: '1px solid rgba(59, 130, 246, 0.1)',
+                            background: 'rgba(6, 182, 212, 0.05)',
+                            border: '1px solid rgba(6, 182, 212, 0.1)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
@@ -104,7 +105,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
                                 width: '40px',
                                 height: '40px',
                                 borderRadius: '10px',
-                                background: 'linear-gradient(45deg, #3b82f6, #06b6d4)',
+                                background: 'linear-gradient(45deg, var(--color-primary), var(--color-accent))',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'

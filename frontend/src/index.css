@@ -5,36 +5,36 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* Tactical / Military Theme */
-  --color-bg: #2B2D31;
-  /* Charcoal Grey - Rocky Background */
-  --color-surface: #32353b;
-  /* Slightly lighter grey for cards */
-  --color-surface-soft: #1e1f22;
-  /* Darker inputs */
+  /* Cyber / Tech Theme */
+  --color-bg: #0f172a;
+  /* Dark Navy / Slate 900 */
+  --color-surface: #1e293b;
+  /* Slate 800 */
+  --color-surface-soft: #334155;
+  /* Slate 700 */
 
-  --color-primary: #556B2F;
-  /* Olive Drab - Operations Buttons */
-  --color-secondary: #6B8E23;
-  /* Olive Drab Light */
-  --color-accent: #8B0000;
-  /* Dark Red - Critical Alerts */
-  --color-highlight: #C2B280;
-  /* Sand/Khaki - Main Text & Data */
+  --color-primary: #06b6d4;
+  /* Cyan 500 - Main Actions */
+  --color-secondary: #0891b2;
+  /* Cyan 600 - Hover States */
+  --color-accent: #10b981;
+  /* Emerald 500 - Success/Tech accents */
+  --color-highlight: #22d3ee;
+  /* Cyan 400 - Glows/Highlights */
 
-  --color-text: #C2B280;
-  /* Sand/Khaki */
-  --color-text-muted: #9CA3AF;
-  /* Muted Grey for less important text */
-  --color-white: #E5E7EB;
-  /* Off-white for readability where needed */
+  --color-text: #f8fafc;
+  /* Slate 50 - Main Text */
+  --color-text-muted: #94a3b8;
+  /* Slate 400 - Secondary Text */
+  --color-white: #ffffff;
 
-  --glass-bg: rgba(43, 45, 49, 0.7);
-  --glass-border: rgba(194, 178, 128, 0.1);
-  /* Subtle Sand border */
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
-  --shadow-neon: 0 0 15px rgba(85, 107, 47, 0.4);
-  /* Olive glow */
+  --glass-bg: rgba(15, 23, 42, 0.85);
+  --glass-border: rgba(6, 182, 212, 0.2);
+  /* Cyan border */
+
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-neon: 0 0 15px rgba(6, 182, 212, 0.4);
+  /* Cyan glow */
 
   color-scheme: dark;
   background-color: var(--color-bg);
@@ -58,49 +58,66 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background: var(--color-bg);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
 }
 
 .glass-card {
-  background: var(--color-surface);
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  /* Sharper corners for tactical look */
+  border-radius: 16px;
   box-shadow: var(--shadow-card);
 }
 
 .neon-button {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   color: #FFFFFF;
-  /* White text on Olive buttons for readability */
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 12px 24px;
-  border-radius: 8px;
-  /* Tactical squared corners */
+  border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
 }
 
 .neon-button:hover {
   transform: translateY(-2px);
-  background: var(--color-secondary);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 25px rgba(6, 182, 212, 0.5);
   border-color: var(--color-highlight);
 }
 
+.neon-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: 0.5s;
+}
+
+.neon-button:hover::after {
+  left: 100%;
+}
+
 .neon-input {
-  background: var(--color-surface-soft);
+  background: rgba(15, 23, 42, 0.5);
   border: 1px solid var(--glass-border);
   padding: 14px 18px;
-  border-radius: 8px;
-  color: var(--color-highlight);
+  border-radius: 12px;
+  color: var(--color-text);
   width: 100%;
   transition: all 0.3s ease;
   outline: none;
@@ -108,9 +125,13 @@ body {
 
 .neon-input:focus {
   border-color: var(--color-highlight);
-  /* Sand border on focus */
-  background: #18191c;
-  box-shadow: 0 0 0 1px rgba(194, 178, 128, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+}
+
+.neon-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.7;
 }
 
 /* Typography Overrides */
@@ -120,9 +141,15 @@ h3,
 h4 {
   color: var(--color-white);
   font-weight: 800;
-  background: none;
-  -webkit-text-fill-color: initial;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.5px;
+}
+
+/* Special Gradients for Text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-highlight), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Scrollbar Styling */
@@ -135,37 +162,29 @@ h4 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
+  background: var(--color-surface-soft);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-secondary);
+  background: var(--color-primary);
 }
 
-/* TACTICAL ICON OVERRIDES */
-/* Determine icons by svg tag generically or specific lucide class if present */
+/* Icon Styles */
 svg.lucide {
-  stroke-width: 2.5px !important;
-  /* Thicker, bolder lines */
-  /* Optional: filter drop-shadow for depth */
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  stroke-width: 2px;
 }
 
-/* Responsive Design for Diagnostic Simulator */
+/* Responsive Design */
 @media (max-width: 768px) {
-
-  /* تقليل padding على الشاشات الصغيرة */
   .diagnostic-simulator-container {
     padding: 20px 20px !important;
   }
 
-  /* تصغير حجم العنوان */
   .diagnostic-simulator-title {
     font-size: 1.8rem !important;
   }
 
-  /* جعل الأزرار بعرض كامل على الشاشات الصغيرة */
   .diagnostic-add-button {
     width: 100%;
     justify-content: center;

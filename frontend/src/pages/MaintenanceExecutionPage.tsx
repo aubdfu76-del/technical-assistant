@@ -127,9 +127,10 @@ const AddSectionModal = ({ onClose, onRefresh, vehicleId }: any) => {
             toast.success('تم إضافة القسم بنجاح');
             onRefresh();
             onClose();
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            toast.error('فشل في إضافة القسم');
+            const errorMsg = err.response?.data?.message || err.message || 'فشل في إضافة القسم';
+            toast.error(errorMsg);
         } finally {
             setLoading(false);
         }

@@ -135,6 +135,18 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                     ALTER TABLE users ADD COLUMN unit_id INTEGER REFERENCES units(id) ON DELETE SET NULL;
                 END IF;
 
+                -- CREATE maintenance_sections TABLE IF NOT EXISTS
+                CREATE TABLE IF NOT EXISTS maintenance_sections (
+                    id SERIAL PRIMARY KEY,
+                    key_id VARCHAR(100),
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    icon VARCHAR(50) DEFAULT 'Wrench',
+                    color VARCHAR(50) DEFAULT '107, 114, 128',
+                    vehicle_ids INTEGER[],
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
                 -- Update role check constraint to include 'trainer'
                 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
                 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'supervisor', 'technician', 'trainer'));

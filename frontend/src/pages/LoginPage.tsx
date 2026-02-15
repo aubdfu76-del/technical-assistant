@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Lock, KeyRound, ArrowRight, ShieldCheck, UserPlus, X, Briefcase, Mail, Phone, Wrench, GraduationCap } from 'lucide-react';
+import { User, Lock, ArrowRight, ShieldCheck, UserPlus, X, Briefcase, Mail, Phone, Wrench, GraduationCap } from 'lucide-react';
 import { authService } from '../services/auth.service';
 import { unitsService } from '../services/units.service'; // Added import
 import { useNavigate } from 'react-router-dom';
@@ -108,27 +108,29 @@ const LoginPage: React.FC = () => {
                 }} />
 
                 <div style={{ position: 'relative', zIndex: 1 }}>
+
                     <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                         <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
                             style={{
-                                width: '64px',
-                                height: '64px',
-                                background: 'rgba(59, 130, 246, 0.1)',
-                                borderRadius: '16px',
+                                width: '80px',
+                                height: '80px',
+                                background: 'rgba(6, 182, 212, 0.1)', // Cyan tint
+                                borderRadius: '20px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 margin: '0 auto 20px',
-                                border: '1px solid rgba(59, 130, 246, 0.3)'
+                                border: '1px solid rgba(6, 182, 212, 0.3)',
+                                boxShadow: '0 0 20px rgba(6, 182, 212, 0.2)'
                             }}
                         >
-                            <KeyRound size={32} color="#3b82f6" />
+                            <img src="/logo.svg" alt="Logo" style={{ width: '50px', height: '50px' }} />
                         </motion.div>
-                        <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>نظام المساعد الذكي</h1>
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                        <h1 style={{ fontSize: '2.5rem', marginBottom: '8px', background: 'linear-gradient(to right, #22d3ee, #10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>نظام المساعد الذكي</h1>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem' }}>
                             الإدارة التقنية الذكية لأسطول المركبات
                         </p>
                     </div>
@@ -136,11 +138,11 @@ const LoginPage: React.FC = () => {
 
                     <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-muted)', marginLeft: '4px' }}>
+                            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-highlight)', marginLeft: '4px' }}>
                                 رقم الموظف
                             </label>
                             <div style={{ position: 'relative' }}>
-                                <User size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                                <User size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-primary)' }} />
                                 <input
                                     type="text"
                                     className="neon-input"
@@ -154,11 +156,11 @@ const LoginPage: React.FC = () => {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-muted)', marginLeft: '4px' }}>
+                            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-highlight)', marginLeft: '4px' }}>
                                 كلمة المرور
                             </label>
                             <div style={{ position: 'relative' }}>
-                                <Lock size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                                <Lock size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-primary)' }} />
                                 <input
                                     type="password"
                                     className="neon-input"
@@ -175,7 +177,7 @@ const LoginPage: React.FC = () => {
                             type="submit"
                             className="neon-button"
                             disabled={loading}
-                            style={{ marginTop: '10px', width: '100%', height: '52px', fontSize: '1rem' }}
+                            style={{ marginTop: '10px', width: '100%', height: '56px', fontSize: '1.1rem' }}
                         >
                             {loading ? (
                                 <div className="spinner" />
@@ -188,65 +190,68 @@ const LoginPage: React.FC = () => {
                         </button>
                     </form>
 
-                    <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+                    <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
                         <button
                             onClick={() => openRegisterModal('supervisor')}
                             style={{
                                 flex: 1,
-                                background: 'rgba(59, 130, 246, 0.1)',
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
-                                borderRadius: '8px',
+                                background: 'rgba(6, 182, 212, 0.05)',
+                                border: '1px solid rgba(6, 182, 212, 0.2)',
+                                borderRadius: '12px',
                                 color: 'var(--color-primary)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '8px',
                                 cursor: 'pointer',
-                                fontSize: '0.85rem',
-                                padding: '10px'
+                                fontSize: '0.9rem',
+                                padding: '12px',
+                                transition: 'all 0.2s',
                             }}
                         >
-                            <UserPlus size={16} />
+                            <UserPlus size={18} />
                             <span>تسجيل مشرف</span>
                         </button>
                         <button
                             onClick={() => openRegisterModal('technician')}
                             style={{
                                 flex: 1,
-                                background: 'rgba(16, 185, 129, 0.1)',
+                                background: 'rgba(16, 185, 129, 0.05)',
                                 border: '1px solid rgba(16, 185, 129, 0.2)',
-                                borderRadius: '8px',
-                                color: '#10b981',
+                                borderRadius: '12px',
+                                color: 'var(--color-accent)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '8px',
                                 cursor: 'pointer',
-                                fontSize: '0.85rem',
-                                padding: '10px'
+                                fontSize: '0.9rem',
+                                padding: '12px',
+                                transition: 'all 0.2s',
                             }}
                         >
-                            <Wrench size={16} />
+                            <Wrench size={18} />
                             <span>تسجيل فني</span>
                         </button>
                         <button
                             onClick={() => openRegisterModal('trainer')}
                             style={{
                                 flex: 1,
-                                background: 'rgba(234, 179, 8, 0.1)',
+                                background: 'rgba(234, 179, 8, 0.05)',
                                 border: '1px solid rgba(234, 179, 8, 0.2)',
-                                borderRadius: '8px',
+                                borderRadius: '12px',
                                 color: '#eab308',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '8px',
                                 cursor: 'pointer',
-                                fontSize: '0.85rem',
-                                padding: '10px'
+                                fontSize: '0.9rem',
+                                padding: '12px',
+                                transition: 'all 0.2s',
                             }}
                         >
-                            <GraduationCap size={16} />
+                            <GraduationCap size={18} />
                             <span>تسجيل مدرب</span>
                         </button>
                     </div>
