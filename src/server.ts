@@ -147,6 +147,35 @@ app.get('/fix-users-schema', async (req: Request, res: Response) => {
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
 
+                -- CREATE common_faults TABLE IF NOT EXISTS (CRITICAL FIX)
+                CREATE TABLE IF NOT EXISTS common_faults (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    severity VARCHAR(50) DEFAULT 'medium',
+                    category VARCHAR(100),
+                    recommended_system VARCHAR(100),
+                    created_by INTEGER REFERENCES users(id),
+                    vehicle_ids INTEGER[],
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+
+                -- CREATE fault_symptoms TABLE IF NOT EXISTS
+                CREATE TABLE IF NOT EXISTS fault_symptoms (
+                    id SERIAL PRIMARY KEY,
+                    fault_id INTEGER REFERENCES common_faults(id) ON DELETE CASCADE,
+                    description TEXT NOT NULL
+                );
+
+                -- CREATE fault_causes TABLE IF NOT EXISTS
+                CREATE TABLE IF NOT EXISTS fault_causes (
+                    id SERIAL PRIMARY KEY,
+                    fault_id INTEGER REFERENCES common_faults(id) ON DELETE CASCADE,
+                    description TEXT NOT NULL
+                );
+
+
                 -- Update role check constraint to include 'trainer'
                 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
                 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'supervisor', 'technician', 'trainer'));
