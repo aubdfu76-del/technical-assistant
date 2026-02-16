@@ -52,22 +52,36 @@ async function seedSaudiMarketData() {
         console.log('🚛 إضافة مركبات (ايسوزو & هايلكس)...');
 
         // 1.1 Isuzu NPR
-        const isuzuRes = await client.query(`
-            INSERT INTO vehicles (plate_number, equipment_name, vehicle_type, model, manufacturer, year, fuel_type, current_km, status, image_url)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id
-        `, ['KSA-2030', 'دينا ايسوزو سطحة', 'شاحنة خفيفة', 'NPR 85', 'Isuzu', 2024, 'ديزل', 15000, 'active', 'https://example.com/isuzu-npr.jpg']);
-        const isuzuId = isuzuRes.rows[0].id;
-        console.log(`✅ تمت إضافة ايسوزو NPR (ID: ${isuzuId})`);
+        let isuzuId;
+        const isuzuCheck = await client.query("SELECT id FROM vehicles WHERE plate_number = 'KSA-2030'");
+        if (isuzuCheck.rows.length > 0) {
+            isuzuId = isuzuCheck.rows[0].id;
+            console.log(`ℹ️ ايسوزو NPR موجودة مسبقاً (ID: ${isuzuId})`);
+        } else {
+            const isuzuRes = await client.query(`
+                INSERT INTO vehicles (plate_number, equipment_name, vehicle_type, model, manufacturer, year, fuel_type, current_km, status, image_url)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                RETURNING id
+            `, ['KSA-2030', 'دينا ايسوزو سطحة', 'شاحنة خفيفة', 'NPR 85', 'Isuzu', 2024, 'ديزل', 15000, 'active', 'https://example.com/isuzu-npr.jpg']);
+            isuzuId = isuzuRes.rows[0].id;
+            console.log(`✅ تمت إضافة ايسوزو NPR (ID: ${isuzuId})`);
+        }
 
         // 1.2 Toyota Hilux
-        const hiluxRes = await client.query(`
-            INSERT INTO vehicles (plate_number, equipment_name, vehicle_type, model, manufacturer, year, fuel_type, current_km, status, image_url)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id
-        `, ['KSA-2034', 'هايلكس غمارتين دبل', 'بيك أب', 'Hilux 2.8L 4x4', 'Toyota', 2023, 'ديزل', 45000, 'active', 'https://example.com/hilux.jpg']);
-        const hiluxId = hiluxRes.rows[0].id;
-        console.log(`✅ تمت إضافة تويوتا هايلكس (ID: ${hiluxId})`);
+        let hiluxId;
+        const hiluxCheck = await client.query("SELECT id FROM vehicles WHERE plate_number = 'KSA-2034'");
+        if (hiluxCheck.rows.length > 0) {
+            hiluxId = hiluxCheck.rows[0].id;
+            console.log(`ℹ️ تويوتا هايلكس موجودة مسبقاً (ID: ${hiluxId})`);
+        } else {
+            const hiluxRes = await client.query(`
+                INSERT INTO vehicles (plate_number, equipment_name, vehicle_type, model, manufacturer, year, fuel_type, current_km, status, image_url)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                RETURNING id
+            `, ['KSA-2034', 'هايلكس غمارتين دبل', 'بيك أب', 'Hilux 2.8L 4x4', 'Toyota', 2023, 'ديزل', 45000, 'active', 'https://example.com/hilux.jpg']);
+            hiluxId = hiluxRes.rows[0].id;
+            console.log(`✅ تمت إضافة تويوتا هايلكس (ID: ${hiluxId})`);
+        }
 
         // ==========================================
         // 2. إضافة أنظمة التشخيص (Diagnosis Systems)
