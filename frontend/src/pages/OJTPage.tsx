@@ -1177,6 +1177,22 @@ const OJTPage = () => {
             completion_rate: 0,
             created_at: '2026-02-01',
             materials: []
+        },
+        {
+            id: 4,
+            title: 'أساسيات فحص الشاحنات (الأجواء الحارة)',
+            description: 'دورة متخصصة في صيانة الشاحنات في بيئة العمل السعودية، تشمل فحص أنظمة التبريد، الإطارات، وفلاتر الهواء والديزل لتجنب الأعطال الشائعة في الصيف.',
+            category: 'صيانة وقائية',
+            duration_hours: 15,
+            instructor: 'م. فهد القحطاني',
+            status: 'active',
+            enrolled_count: 25,
+            completion_rate: 40,
+            created_at: '2026-02-16',
+            materials: [
+                { id: 4, type: 'document', title: 'قائمة فحص الصيف', url: '#' },
+                { id: 5, type: 'video', title: 'طريقة تنظيف الرديتر', url: '#' }
+            ]
         }
     ];
 
