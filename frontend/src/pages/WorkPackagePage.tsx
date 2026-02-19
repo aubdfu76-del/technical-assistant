@@ -65,9 +65,18 @@ const MediaGallery = ({ media, canEdit, onMediaDelete, onMediaUpdate }: {
         }
     };
 
+    const getMediaLabel = (m: DiagnosisMedia, idx: number) => {
+        const type = m.type === 'image' ? 'صورة' : 'فيديو';
+        // Try to extract filename from URL
+        const urlParts = m.url?.split('/') || [];
+        const rawName = urlParts[urlParts.length - 1] || '';
+        const cleanName = decodeURIComponent(rawName).replace(/^\d+-/, '').replace(/\.[^.]+$/, '');
+        return cleanName || `${type} ${idx + 1}`;
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ position: 'relative', height: '450px', background: '#000', borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+            <div style={{ position: 'relative', height: '450px', background: '#0a0a0a', borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                 <AnimatePresence mode="wait">
                     {currentMedia?.type === 'image' ? (
                         <motion.img
@@ -76,7 +85,11 @@ const MediaGallery = ({ media, canEdit, onMediaDelete, onMediaUpdate }: {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             src={currentMedia.url}
+                            alt={getMediaLabel(currentMedia, activeIdx)}
                             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                            }}
                         />
                     ) : (
                         <motion.video
@@ -85,8 +98,10 @@ const MediaGallery = ({ media, canEdit, onMediaDelete, onMediaUpdate }: {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             controls
-                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                            src={currentMedia?.url}
+                            preload="metadata"
+                            playsInline
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                            src={currentMedia?.url ? `${currentMedia.url}#t=0.5` : ''}
                         >
                             <source src={currentMedia?.url} type="video/mp4" />
                             <source src={currentMedia?.url} type="video/webm" />
@@ -95,9 +110,14 @@ const MediaGallery = ({ media, canEdit, onMediaDelete, onMediaUpdate }: {
                     )}
                 </AnimatePresence>
 
-                <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', padding: '20px', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))' }}>
+                <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', padding: '20px', background: 'linear-gradient(transparent, rgba(0,0,0,0.85))' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <p style={{ color: '#fff', fontWeight: 600 }}>الوسائط المرفقة {activeIdx + 1}</p>
+                        <div>
+                            <p style={{ color: '#fff', fontWeight: 600, fontSize: '0.95rem' }}>{getMediaLabel(currentMedia, activeIdx)}</p>
+                            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginTop: '4px' }}>
+                                {currentMedia?.type === 'image' ? '📷 صورة' : '🎬 فيديو'} • {activeIdx + 1} من {media.length}
+                            </p>
+                        </div>
                         {canEdit && (
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <motion.button
@@ -253,6 +273,7 @@ const MediaGallery = ({ media, canEdit, onMediaDelete, onMediaUpdate }: {
                 )}
             </div>
 
+            {/* Thumbnails Strip with Labels */}
             <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px' }}>
                 {media.map((m, idx) => (
                     <motion.div
@@ -260,52 +281,87 @@ const MediaGallery = ({ media, canEdit, onMediaDelete, onMediaUpdate }: {
                         whileHover={{ scale: 1.05 }}
                         onClick={() => setActiveIdx(idx)}
                         style={{
-                            width: '100px',
-                            height: '70px',
-                            borderRadius: '12px',
-                            background: '#222',
-                            cursor: 'pointer',
-                            border: activeIdx === idx ? '2px solid #3b82f6' : '1px solid var(--glass-border)',
                             display: 'flex',
+                            flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            overflow: 'hidden',
-                            flexShrink: 0
+                            gap: '6px',
+                            flexShrink: 0,
+                            cursor: 'pointer'
                         }}
                     >
-                        {m.type === 'image' ? (
-                            <img
-                                src={m.url}
-                                alt=""
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100x70?text=Error';
-                                }}
-                            />
-                        ) : (
-                            <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
-                                <video
+                        <div style={{
+                            width: '110px',
+                            height: '75px',
+                            borderRadius: '12px',
+                            background: '#111',
+                            border: activeIdx === idx ? '2px solid #3b82f6' : '1px solid var(--glass-border)',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            boxShadow: activeIdx === idx ? '0 0 12px rgba(59,130,246,0.4)' : 'none',
+                            transition: 'all 0.3s ease'
+                        }}>
+                            {m.type === 'image' ? (
+                                <img
                                     src={m.url}
+                                    alt={getMediaLabel(m, idx)}
                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    muted
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/110x75?text=Error';
+                                    }}
                                 />
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    background: 'rgba(59, 130, 246, 0.9)',
-                                    borderRadius: '50%',
-                                    width: '30px',
-                                    height: '30px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}>
-                                    <Play size={16} color="#fff" />
+                            ) : (
+                                <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
+                                    <video
+                                        src={`${m.url}#t=0.5`}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        muted
+                                        preload="metadata"
+                                    />
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        background: 'rgba(59, 130, 246, 0.9)',
+                                        borderRadius: '50%',
+                                        width: '28px',
+                                        height: '28px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Play size={14} color="#fff" />
+                                    </div>
                                 </div>
+                            )}
+                            {/* Type badge */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '4px',
+                                right: '4px',
+                                background: m.type === 'image' ? 'rgba(16,185,129,0.85)' : 'rgba(59,130,246,0.85)',
+                                borderRadius: '4px',
+                                padding: '1px 5px',
+                                fontSize: '0.6rem',
+                                color: '#fff',
+                                fontWeight: 600
+                            }}>
+                                {m.type === 'image' ? '📷' : '🎬'}
                             </div>
-                        )}
+                        </div>
+                        <span style={{
+                            fontSize: '0.65rem',
+                            color: activeIdx === idx ? '#3b82f6' : 'var(--color-text-muted)',
+                            maxWidth: '110px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            textAlign: 'center',
+                            fontWeight: activeIdx === idx ? 600 : 400,
+                            transition: 'all 0.3s ease'
+                        }}>
+                            {getMediaLabel(m, idx)}
+                        </span>
                     </motion.div>
                 ))}
             </div>
