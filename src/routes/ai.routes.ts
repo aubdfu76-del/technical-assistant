@@ -123,7 +123,17 @@ router.post('/manuals/upload', authenticate, (req, res, next) => {
             const dataBuffer = fs.readFileSync(file.path);
 
             // Parse PDF with timeout using pdf-parse v2 class API
-            const parser = new PDFParse({ data: new Uint8Array(dataBuffer) });
+            // Configure CMap and standard fonts for correct Arabic text extraction
+            const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
+            const cMapUrl = path.join(pdfjsDistPath, 'cmaps/');
+            const standardFontDataUrl = path.join(pdfjsDistPath, 'standard_fonts/');
+
+            const parser = new PDFParse({
+                data: new Uint8Array(dataBuffer),
+                cMapUrl,
+                cMapPacked: true,
+                standardFontDataUrl
+            });
             const parsePromise = parser.getText({ first: 200 });
 
             const timeoutPromise = new Promise((_, reject) =>
@@ -349,7 +359,17 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
         const { PDFParse } = require('pdf-parse');
         const dataBuffer = fs.readFileSync(filePath);
 
-        const parser = new PDFParse({ data: new Uint8Array(dataBuffer) });
+        // Configure CMap and standard fonts for correct Arabic text extraction
+        const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
+        const cMapUrl = path.join(pdfjsDistPath, 'cmaps/');
+        const standardFontDataUrl = path.join(pdfjsDistPath, 'standard_fonts/');
+
+        const parser = new PDFParse({
+            data: new Uint8Array(dataBuffer),
+            cMapUrl,
+            cMapPacked: true,
+            standardFontDataUrl
+        });
         const parsePromise = parser.getText({ first: 200 });
 
         const timeoutPromise = new Promise((_, reject) =>
