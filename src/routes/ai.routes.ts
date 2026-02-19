@@ -119,7 +119,8 @@ router.post('/manuals/upload', authenticate, (req, res, next) => {
         let pdfContent = '';
         try {
             console.log(`📄 Starting PDF extraction for file: ${file.filename} (${fileSizeMB}MB)`);
-            const pdfParse = require('pdf-parse');
+            const pdfParseModule = require('pdf-parse');
+            const pdfParse = pdfParseModule.default || pdfParseModule;
             const dataBuffer = fs.readFileSync(file.path);
 
             // Parse PDF with timeout - increased to 200 pages for comprehensive content
@@ -343,7 +344,8 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
 
         // Extract text from PDF
         let pdfContent = '';
-        const pdfParse = require('pdf-parse');
+        const pdfParseModule = require('pdf-parse');
+        const pdfParse = pdfParseModule.default || pdfParseModule;
         const dataBuffer = fs.readFileSync(filePath);
 
         const parsePromise = pdfParse(dataBuffer, {
