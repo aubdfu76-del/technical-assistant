@@ -410,24 +410,37 @@ const EditRepairWorkPackageModal = ({ task, onClose, onRefresh }: { task: Repair
                     <div style={{ marginTop: '10px' }}>
                         <label style={{ display: 'block', marginBottom: '12px', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>الوسائط (صور وفيديوهات)</label>
                         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                            {/* Upload Area */}
                             <label
-                                className="glass-card"
                                 style={{
-                                    width: '100px',
-                                    height: '100px',
+                                    width: '100%',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
                                     justifyContent: 'center',
+                                    gap: '10px',
+                                    padding: '25px 20px',
+                                    borderRadius: '16px',
+                                    border: '2px dashed rgba(59, 130, 246, 0.4)',
+                                    background: 'rgba(59, 130, 246, 0.05)',
                                     cursor: uploading ? 'wait' : 'pointer',
-                                    border: '1px dashed var(--color-primary)',
-                                    gap: '8px',
-                                    background: 'rgba(59, 130, 246, 0.05)'
+                                    transition: 'all 0.3s ease',
+                                    marginBottom: '8px'
                                 }}
                             >
                                 <input type="file" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploading} accept="image/*,video/*" />
-                                {uploading ? <div className="spinner" style={{ width: '20px', height: '20px' }} /> : <Upload size={24} color="#3b82f6" />}
-                                <span style={{ fontSize: '0.7rem', color: '#3b82f6' }}>{uploading ? 'جاري الرفع' : 'رفع ملف'}</span>
+                                {uploading ? (
+                                    <>
+                                        <div className="spinner" style={{ width: '28px', height: '28px' }} />
+                                        <span style={{ color: '#3b82f6', fontSize: '0.85rem' }}>جاري رفع الملف...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload size={28} color="#3b82f6" />
+                                        <span style={{ color: '#3b82f6', fontSize: '0.85rem', fontWeight: 600 }}>اضغط هنا لاختيار صورة أو فيديو</span>
+                                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>يدعم: JPG, PNG, GIF, MP4, WebM (حتى 50 ميجابايت)</span>
+                                    </>
+                                )}
                             </label>
 
                             {/* Task-level Media */}
