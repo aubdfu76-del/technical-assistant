@@ -119,21 +119,19 @@ router.post('/manuals/upload', authenticate, (req, res, next) => {
         let pdfContent = '';
         try {
             console.log(`📄 Starting PDF extraction for file: ${file.filename} (${fileSizeMB}MB)`);
-            const pdfParseModule = require('pdf-parse');
-            const pdfParse = pdfParseModule.default || pdfParseModule;
+            const { PDFParse } = require('pdf-parse');
             const dataBuffer = fs.readFileSync(file.path);
 
-            // Parse PDF with timeout - increased to 200 pages for comprehensive content
-            const parsePromise = pdfParse(dataBuffer, {
-                max: 200 // Extract up to 200 pages for thorough coverage
-            });
+            // Parse PDF with timeout using pdf-parse v2 class API
+            const parser = new PDFParse({ data: new Uint8Array(dataBuffer) });
+            const parsePromise = parser.getText({ first: 200 });
 
             const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('PDF parsing timeout')), 60000) // 60 seconds for larger files
             );
 
-            const pdfData = await Promise.race([parsePromise, timeoutPromise]) as any;
-            pdfContent = pdfData.text || '';
+            const textResult = await Promise.race([parsePromise, timeoutPromise]) as any;
+            pdfContent = textResult.text || '';
 
             // Clean up extracted text - remove excessive whitespace/newlines
             pdfContent = pdfContent
@@ -141,7 +139,10 @@ router.post('/manuals/upload', authenticate, (req, res, next) => {
                 .replace(/[ \t]{2,}/g, ' ')   // Reduce multiple spaces
                 .trim();
 
-            console.log(`✅ Extracted ${pdfContent.length} characters from PDF (${pdfData.numpages || '?'} pages)`);
+            // Cleanup parser
+            try { await parser.destroy(); } catch (e) { }
+
+            console.log(`✅ Extracted ${pdfContent.length} characters from PDF (${textResult.total || '?'} pages)`);
 
             // Limit content to 500,000 characters to prevent database issues
             if (pdfContent.length > 500000) {
@@ -343,21 +344,20 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
         console.log(`🔄 Reprocessing manual: "${manualData.title}" (${manualData.file_path})`);
 
         // Extract text from PDF
+        // Extract text from PDF using pdf-parse v2 class API
         let pdfContent = '';
-        const pdfParseModule = require('pdf-parse');
-        const pdfParse = pdfParseModule.default || pdfParseModule;
+        const { PDFParse } = require('pdf-parse');
         const dataBuffer = fs.readFileSync(filePath);
 
-        const parsePromise = pdfParse(dataBuffer, {
-            max: 200 // Up to 200 pages
-        });
+        const parser = new PDFParse({ data: new Uint8Array(dataBuffer) });
+        const parsePromise = parser.getText({ first: 200 });
 
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('PDF parsing timeout - الملف كبير جداً')), 120000) // 2 minutes
         );
 
-        const pdfData = await Promise.race([parsePromise, timeoutPromise]) as any;
-        pdfContent = pdfData.text || '';
+        const textResult = await Promise.race([parsePromise, timeoutPromise]) as any;
+        pdfContent = textResult.text || '';
 
         // Clean up text
         pdfContent = pdfContent
@@ -365,12 +365,15 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
             .replace(/[ \t]{2,}/g, ' ')
             .trim();
 
+        // Cleanup parser
+        try { await parser.destroy(); } catch (e) { }
+
         // Limit to 500K chars
         if (pdfContent.length > 500000) {
             pdfContent = pdfContent.substring(0, 500000);
         }
 
-        console.log(`✅ Extracted ${pdfContent.length} characters from "${manualData.title}" (${pdfData.numpages || '?'} pages)`);
+        console.log(`✅ Extracted ${pdfContent.length} characters from "${manualData.title}" (${textResult.total || '?'} pages)`);
 
         if (pdfContent.length === 0) {
             return res.json({
@@ -389,10 +392,10 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
 
         res.json({
             success: true,
-            message: `تم إعادة معالجة الكراسة بنجاح! تم استخراج ${pdfContent.length.toLocaleString()} حرف من ${pdfData.numpages || '?'} صفحة.`,
+            message: `تم إعادة معالجة الكراسة بنجاح! تم استخراج ${pdfContent.length.toLocaleString()} حرف من ${textResult.total || '?'} صفحة.`,
             data: {
                 content_length: pdfContent.length,
-                pages: pdfData.numpages || 0,
+                pages: textResult.total || 0,
                 preview: pdfContent.substring(0, 200) + '...'
             }
         });
