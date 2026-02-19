@@ -10,6 +10,7 @@ export interface GeminiCitation {
     snippet: string;
     link?: string;
     type?: 'manual' | 'fault' | 'vehicle';
+    page?: number;
 }
 
 export interface GeminiResponse {
@@ -129,15 +130,16 @@ ${hasContent ? `
 
 **قواعد إلزامية للإجابة:**
 1. 📖 **اقرأ وافهم المحتوى المتوفر بالكامل** - ابحث فيه عن كل المعلومات المتعلقة بسؤال المستخدم
-2. 🔍 **استخرج كل التفاصيل ذات الصلة** - لا تكتفِ بذكر أن الكراسة موجودة، بل اعرض المعلومات الفعلية منها
-3. 🌐 **ترجم كل المحتوى الإنجليزي للعربية** بدقة واحترافية مع ذكر المصطلح الإنجليزي بين قوسين
-4. ✍️ **قدم إجابة شاملة ومفصلة** تغطي جميع جوانب السؤال بناءً على المحتوى المتوفر
-5. 📝 **نظّم الإجابة بشكل واضح** مع عناوين وخطوات مرقمة ونقاط واضحة
-6. 🔢 **احتفظ بالأرقام والمواصفات كما هي** (مثل: 24V، 15 PSI، 250 hours، Part Numbers)
-7. ⚠️ **أضف تحذيرات السلامة** إذا كانت موجودة في الكراسة
-8. 📌 **اذكر مصدر المعلومة** (اسم الكراسة)
-9. 🔧 **إذا وجدت أرقام قطع غيار (Part Numbers) أو أدوات مطلوبة، اذكرها بوضوح**
-10. 📊 **إذا وجدت جداول أو قيم محددة، اعرضها بشكل منظم**
+2. 🚫 **تجاهل تماماً ترويسات وتذييلات الصفحات** (مثل أرقام الصفحات "Page 1 of 50", التواريخ, أسماء الملفات) ولا تدرجها في الإجابة
+3. 🔍 **استخرج كل التفاصيل ذات الصلة** - لا تكتفِ بذكر أن الكراسة موجودة، بل اعرض المعلومات الفعلية منها
+4. 🌐 **ترجم كل المحتوى الإنجليزي للعربية** بدقة واحترافية مع ذكر المصطلح الإنجليزي بين قوسين
+5. ✍️ **قدم إجابة شاملة ومفصلة** تغطي جميع جوانب السؤال بناءً على المحتوى المتوفر
+6. 📝 **نظّم الإجابة بشكل واضح** مع عناوين وخطوات مرقمة ونقاط واضحة
+7. 🔢 **احتفظ بالأرقام والمواصفات كما هي** (مثل: 24V، 15 PSI، 250 hours، Part Numbers)
+8. ⚠️ **أضف تحذيرات السلامة** إذا كانت موجودة في الكراسة
+9. 📌 **اذكر مصدر المعلومة** (اسم الكراسة)
+10. 🔧 **إذا وجدت أرقام قطع غيار (Part Numbers) أو أدوات مطلوبة، اذكرها بوضوح**
+11. 📊 **إذا وجدت جداول أو قيم محددة، اعرضها بشكل منظم**
 
 **هام جداً:** لا تقل فقط "يوجد كراسة تحتوي على معلومات" - بل اعرض المعلومات نفسها بالتفصيل!
 
@@ -265,22 +267,69 @@ ${hasContent ? `
      */
     private buildCitations(context: any): GeminiCitation[] {
         const citations: GeminiCitation[] = [];
+        const keywords = context.keywords || [];
 
         // Add manual citations
         if (context.manuals) {
             context.manuals.forEach((m: any) => {
-                const snippet = m.content
-                    ? m.content.substring(0, 150).trim() + '...'
-                    : (m.content_preview
-                        ? m.content_preview.substring(0, 150).trim() + '...'
-                        : (m.description ? m.description.substring(0, 100) + '...' : 'ملف فني بصيغة PDF'));
+                let snippet = '';
+                let pageNumber: number | undefined = undefined;
+
+                // Find best snippet and page number
+                if (m.content && keywords.length > 0) {
+                    // Find first keyword occurrence
+                    const contentLower = m.content.toLowerCase();
+                    let bestIndex = -1;
+
+                    for (const keyword of keywords) {
+                        const idx = contentLower.indexOf(keyword.toLowerCase());
+                        if (idx >= 0) {
+                            bestIndex = idx;
+                            break;
+                        }
+                    }
+
+                    if (bestIndex >= 0) {
+                        // Extract snippet around match
+                        const start = Math.max(0, bestIndex - 60);
+                        const end = Math.min(m.content.length, bestIndex + 100);
+                        snippet = (start > 0 ? '...' : '') + m.content.substring(start, end).trim() + '...';
+
+                        // Find page number
+                        // Search backwards from bestIndex for "--- Page X ---"
+                        // We extract the substring up to the match and find the last occurrence of the marker
+                        const textBeforeMatch = m.content.substring(0, bestIndex);
+                        const matches = [...textBeforeMatch.matchAll(/--- Page (\d+) ---/g)];
+                        if (matches.length > 0) {
+                            pageNumber = parseInt(matches[matches.length - 1][1]);
+                        } else {
+                            // Maybe the first page marker is slightly after? or we are on page 1 implied?
+                            pageNumber = 1;
+                        }
+                    }
+                }
+
+                // Fallback if no specific match found
+                if (!snippet) {
+                    snippet = m.content
+                        ? m.content.substring(0, 150).trim() + '...'
+                        : (m.content_preview
+                            ? m.content_preview.substring(0, 150).trim() + '...'
+                            : (m.description ? m.description.substring(0, 100) + '...' : 'ملف فني بصيغة PDF'));
+
+                    if (m.content) {
+                        const match = /--- Page (\d+) ---/.exec(m.content);
+                        if (match) pageNumber = parseInt(match[1]);
+                    }
+                }
 
                 citations.push({
                     doc_title: m.title,
                     doc_id: m.id,
                     snippet,
                     link: `/uploads/manuals/${m.file_path.split(/[\\/]/).pop()}`,
-                    type: 'manual'
+                    type: 'manual',
+                    page: pageNumber
                 });
             });
         }

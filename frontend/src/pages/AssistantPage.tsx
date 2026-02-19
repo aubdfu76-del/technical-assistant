@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     Send, User, FileText, Sparkles, Loader2,
-    Wrench, Upload, Book, X, Search, Brain, Plus, Trash2, Car, RefreshCw
+    Wrench, Upload, Book, X, Search, Brain, Plus, Trash2, Car, RefreshCw, Eye
 } from 'lucide-react';
+import { Modal } from '../components/Modal';
 import DashboardLayout from '../components/DashboardLayout';
 import { aiService } from '../services/ai.service';
 import type { Citation as AICitation, TechnicalManual } from '../services/ai.service';
@@ -20,7 +21,18 @@ interface Message {
     timestamp: Date;
 }
 
-const ChatBubble = ({ message }: { message: Message }) => {
+// Helper to parse bold text (**text**)
+const parseBold = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+        }
+        return part;
+    });
+};
+
+const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (manualId: string, page: number, title: string) => void }) => {
     const isUser = message.role === 'user';
 
     return (
@@ -59,89 +71,79 @@ const ChatBubble = ({ message }: { message: Message }) => {
                         )}
                     </div>
 
-                    <div
-                        className="ai-message-content"
-                        style={{
-                            color: isUser ? 'var(--color-white)' : 'var(--color-text)'
-                        }}
-                    >
+                    <div className="ai-message-content" dir="rtl" style={{ color: isUser ? 'var(--color-white)' : 'var(--color-text)' }}>
                         {message.content.split('\n').map((line, idx) => {
-                            // Skip empty lines but keep spacing
-                            if (line.trim() === '') {
-                                return <div key={idx} style={{ height: '8px' }} />;
+                            // Empty lines
+                            if (!line.trim()) return <div key={idx} className="h-2" />;
+
+                            // Headers (### or ##)
+                            if (line.startsWith('### ') || line.startsWith('## ')) {
+                                return (
+                                    <h3 key={idx} className="text-lg font-bold text-[var(--color-highlight)] mt-4 mb-2 border-b border-white/10 pb-1">
+                                        {parseBold(line.replace(/^#+\s/, ''))}
+                                    </h3>
+                                );
                             }
 
-                            // Check for different line types
-                            const isMainHeader = /^📖\s*\*\*/.test(line);
-                            const isWarning = /^⚠️\s*\*\*/.test(line);
-                            const isTip = /^💡\s*\*\*/.test(line);
-                            const isListItem = /^[\d]+\.\s/.test(line);
-                            const isBullet = /^[-•]\s/.test(line);
-                            const isSource = /^\(المصدر:/.test(line);
-                            const isBold = /\*\*.*\*\*/.test(line);
+                            // Horizontal Rule
+                            if (line.trim() === '---') {
+                                return <hr key={idx} className="border-[var(--glass-border)] my-4" />;
+                            }
 
-                            // Clean the line from markdown
-                            let cleanLine = line.replace(/\*\*/g, '');
-
-                            // Main header (📖 من الكراسة...)
-                            if (isMainHeader) {
+                            // Bullet Points
+                            if (line.trim().startsWith('- ')) {
                                 return (
-                                    <div key={idx} className="message-header">
-                                        {cleanLine}
+                                    <div key={idx} className="flex items-start gap-2 mb-1 mr-4">
+                                        <span className="text-[var(--color-highlight)] mt-1.5">•</span>
+                                        <span className="leading-relaxed">{parseBold(line.trim().substring(2))}</span>
                                     </div>
                                 );
                             }
 
-                            // Warning section
-                            if (isWarning) {
+                            // Numbered Lists
+                            if (/^\d+\.\s/.test(line.trim())) {
+                                const match = line.trim().match(/^(\d+)\.\s(.*)/);
+                                if (match) {
+                                    return (
+                                        <div key={idx} className="flex items-start gap-2 mb-2 mr-4">
+                                            <span className="text-[var(--color-highlight)] font-mono text-sm mt-0.5 min-w-[20px]">{match[1]}.</span>
+                                            <span className="leading-relaxed">{parseBold(match[2])}</span>
+                                        </div>
+                                    );
+                                }
+                            }
+
+                            // Special Blocks
+                            if (line.startsWith('⚠️') || line.includes('تحذير:')) {
                                 return (
-                                    <div key={idx} className="message-warning">
-                                        <strong>{cleanLine}</strong>
+                                    <div key={idx} className="bg-red-500/10 border-r-4 border-red-500 p-3 rounded my-2 text-white">
+                                        {parseBold(line)}
                                     </div>
                                 );
                             }
 
-                            // Tip section
-                            if (isTip) {
+                            if (line.startsWith('💡') || line.startsWith('📌')) {
                                 return (
-                                    <div key={idx} className="message-tip">
-                                        <strong>{cleanLine}</strong>
+                                    <div key={idx} className="bg-blue-500/10 border-r-4 border-blue-500 p-3 rounded my-2 text-white">
+                                        {parseBold(line)}
                                     </div>
                                 );
                             }
 
-                            // Source citation
-                            if (isSource) {
+                            // Legacy Headers
+                            if (/^📖|🛠️|🚗|🔍/.test(line)) {
                                 return (
-                                    <div key={idx} className="message-source">
-                                        {cleanLine}
-                                    </div>
+                                    <h3 key={idx} className="text-lg font-bold text-[var(--color-highlight)] mt-5 mb-3 flex items-center gap-2">
+                                        {parseBold(line)}
+                                    </h3>
                                 );
                             }
 
-                            // List items
-                            if (isListItem || isBullet) {
-                                return (
-                                    <div key={idx} className="message-list-item">
-                                        {cleanLine}
-                                    </div>
-                                );
-                            }
-
-                            // Bold text
-                            if (isBold) {
-                                return (
-                                    <div key={idx} className="message-section">
-                                        <strong>{cleanLine}</strong>
-                                    </div>
-                                );
-                            }
-
-                            // Regular text
+                            // Default paragraph
                             return (
-                                <div key={idx} style={{ marginBottom: '8px', lineHeight: '1.7' }}>
-                                    {cleanLine}
-                                </div>
+                                <p key={idx} className="mb-2 leading-relaxed text-gray-200">
+                                    {parseBold(line)}
+                                </p>
                             );
                         })}
                     </div>
@@ -168,7 +170,7 @@ const ChatBubble = ({ message }: { message: Message }) => {
                                         href={citation.link || '#'}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="glass-card group flex items-start gap-3 p-4 hover:border-[var(--color-highlight)] transition-all cursor-pointer"
+                                        className="glass-card group flex items-start gap-3 p-4 hover:border-[var(--color-highlight)] transition-all cursor-pointer relative"
                                         style={{ borderColor: 'var(--glass-border)' }}
                                     >
                                         <div className={`p-2 rounded-lg ${citation.type === 'manual'
@@ -187,12 +189,35 @@ const ChatBubble = ({ message }: { message: Message }) => {
                                         </div>
 
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-sm font-semibold truncate group-hover:text-[var(--color-highlight)] transition-colors" style={{ color: 'var(--color-white)' }}>
-                                                {citation.doc_title}
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-sm font-semibold truncate group-hover:text-[var(--color-highlight)] transition-colors" style={{ color: 'var(--color-white)' }}>
+                                                    {citation.doc_title}
+                                                </div>
+                                                {citation.type === 'manual' && citation.page && (
+                                                    <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">
+                                                        ص {citation.page}
+                                                    </span>
+                                                )}
                                             </div>
+
                                             <div className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>
                                                 {citation.snippet}
                                             </div>
+
+                                            {citation.type === 'manual' && citation.page && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        onViewPage(citation.doc_id, citation.page!, citation.doc_title);
+                                                    }}
+                                                    className="mt-2 text-xs flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
+                                                    style={{ color: 'var(--color-highlight)' }}
+                                                >
+                                                    <Eye size={12} />
+                                                    عرض الصفحة
+                                                </button>
+                                            )}
                                         </div>
                                     </motion.a>
                                 ))}
@@ -423,6 +448,7 @@ const AssistantPage = () => {
     const [vehicles, setVehicles] = useState<any[]>([]);
     const [selectedVehicle, setSelectedVehicle] = useState<string>('');
     const [reprocessingId, setReprocessingId] = useState<string | null>(null);
+    const [viewingPage, setViewingPage] = useState<{ manualId: string, page: number, title: string } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -650,7 +676,11 @@ const AssistantPage = () => {
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '30px 20px', paddingBottom: '150px' }}>
                         {messages.map((msg) => (
-                            <ChatBubble key={msg.id} message={msg} />
+                            <ChatBubble
+                                key={msg.id}
+                                message={msg}
+                                onViewPage={(manualId, page, title) => setViewingPage({ manualId, page, title })}
+                            />
                         ))}
 
                         {isLoading && (
@@ -725,6 +755,40 @@ const AssistantPage = () => {
             </div>
 
             {showUploadModal && <UploadModal onClose={() => setShowUploadModal(false)} onUploadSuccess={loadManuals} vehicles={vehicles} />}
+
+            <Modal
+                isOpen={!!viewingPage}
+                onClose={() => setViewingPage(null)}
+                title={viewingPage ? `${viewingPage.title} - صفحة ${viewingPage.page}` : ''}
+                maxWidth="900px"
+            >
+                {viewingPage && (
+                    <div className="flex flex-col items-center p-4 bg-black/50 min-h-[500px]">
+                        <div className="relative w-full h-full flex justify-center">
+                            <img
+                                src={`/api/ai/manuals/${viewingPage.manualId}/pages/${viewingPage.page}`}
+                                alt={`Page ${viewingPage.page}`}
+                                className="max-w-full h-auto rounded shadow-lg border border-white/10"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '';
+                                    toast.error('فشل تحميل الصورة');
+                                }}
+                            />
+                        </div>
+                        <div className="mt-4 flex gap-4">
+                            <a
+                                href={`/api/ai/manuals/${viewingPage.manualId}/pages/${viewingPage.page}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="neon-button text-sm px-4 py-2"
+                            >
+                                <Eye size={16} className="mr-2" />
+                                فتح في تبويب جديد
+                            </a>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </DashboardLayout>
     );
 };
