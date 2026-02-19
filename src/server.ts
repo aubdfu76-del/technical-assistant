@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { initializePool, closePool, getPool } from './config/database';
+import { initializeStorage } from './config/supabase';
 import authRoutes from './routes/auth.routes';
 import usersRoutes from './routes/users.routes';
 import vehiclesRoutes from './routes/vehicles.routes';
@@ -551,6 +552,9 @@ const startServer = async () => {
     try {
         // Initialize SQL Server connection pool
         await initializePool();
+
+        // Initialize Supabase Storage
+        await initializeStorage();
 
         // Run database migrations
         const { runMigrations } = await import('./migrations');

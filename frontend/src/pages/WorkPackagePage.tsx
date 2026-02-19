@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowRight,
     Play,
-    Image as ImageIcon,
     Info,
     CheckCircle2,
     Clock,
@@ -11,7 +10,6 @@ import {
     Edit,
     X,
     Save,
-    Film,
     Upload as UploadIcon,
     Trash2,
     Edit2,
@@ -556,62 +554,83 @@ const EditWorkPackageModal = ({ item, onClose, onRefresh }: { item: DiagnosisIte
 
                     <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '20px' }}>
                         <h4 style={{ fontSize: '1rem', color: '#fff', marginBottom: '16px' }}>إضافة وسائط تعليمية (اختياري)</h4>
-                        <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                            <button
-                                onClick={() => setMediaType('image')}
-                                style={{
-                                    flex: 1, padding: '10px', borderRadius: '8px',
-                                    background: mediaType === 'image' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                                    border: `1px solid ${mediaType === 'image' ? '#3b82f6' : 'var(--glass-border)'}`,
-                                    color: mediaType === 'image' ? '#3b82f6' : '#fff',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                }}
-                            >
-                                <ImageIcon size={18} /> صور
-                            </button>
-                            <button
-                                onClick={() => setMediaType('video')}
-                                style={{
-                                    flex: 1, padding: '10px', borderRadius: '8px',
-                                    background: mediaType === 'video' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                                    border: `1px solid ${mediaType === 'video' ? '#3b82f6' : 'var(--glass-border)'}`,
-                                    color: mediaType === 'video' ? '#3b82f6' : '#fff',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                                }}
-                            >
-                                <Film size={18} /> فيديو
-                            </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                            <div style={{ flex: 1, position: 'relative' }}>
-                                <input
-                                    className="neon-input"
-                                    value={mediaUrl}
-                                    onChange={(e) => setMediaUrl(e.target.value)}
-                                    placeholder="رابط (URL) أو اختر ملف من اليسار..."
-                                    style={{ paddingLeft: '40px' }}
-                                />
-                                {uploading && (
-                                    <div className="spinner" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px' }} />
-                                )}
-                            </div>
-                            <label style={{
-                                width: '50px',
-                                height: '50px',
+
+                        {/* Upload Area */}
+                        <label style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            padding: '30px 20px',
+                            borderRadius: '16px',
+                            border: '2px dashed rgba(59, 130, 246, 0.4)',
+                            background: mediaUrl ? 'rgba(16, 185, 129, 0.05)' : 'rgba(59, 130, 246, 0.05)',
+                            cursor: uploading ? 'wait' : 'pointer',
+                            transition: 'all 0.3s ease',
+                            marginBottom: '12px'
+                        }}>
+                            <input
+                                type="file"
+                                hidden
+                                onChange={handleFileChange}
+                                accept="image/*,video/*"
+                                disabled={uploading}
+                            />
+                            {uploading ? (
+                                <>
+                                    <div className="spinner" style={{ width: '32px', height: '32px' }} />
+                                    <span style={{ color: '#3b82f6', fontSize: '0.9rem' }}>جاري رفع الملف...</span>
+                                </>
+                            ) : mediaUrl ? (
+                                <>
+                                    <CheckCircle2 size={32} color="#10b981" />
+                                    <span style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 600 }}>تم رفع الملف بنجاح ✓</span>
+                                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>اضغط هنا لاختيار ملف آخر</span>
+                                </>
+                            ) : (
+                                <>
+                                    <UploadIcon size={32} color="#3b82f6" />
+                                    <span style={{ color: '#3b82f6', fontSize: '0.9rem', fontWeight: 600 }}>اضغط هنا لاختيار صورة أو فيديو</span>
+                                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>يدعم: JPG, PNG, GIF, MP4, WebM (حتى 50 ميجابايت)</span>
+                                </>
+                            )}
+                        </label>
+
+                        {/* Preview of uploaded file */}
+                        {mediaUrl && (
+                            <div style={{
                                 borderRadius: '12px',
-                                background: 'rgba(59, 130, 246, 0.1)',
-                                border: '1px solid #3b82f6',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                color: '#3b82f6',
-                                flexShrink: 0
+                                overflow: 'hidden',
+                                border: '1px solid var(--glass-border)',
+                                maxHeight: '200px',
+                                position: 'relative'
                             }}>
-                                <input type="file" hidden onChange={handleFileChange} accept="image/*,video/*" />
-                                <UploadIcon size={20} />
-                            </label>
-                        </div>
+                                {mediaType === 'image' ? (
+                                    <img src={mediaUrl} alt="معاينة" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', background: '#000' }} />
+                                ) : (
+                                    <video src={mediaUrl} controls style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', background: '#000' }} />
+                                )}
+                                <button
+                                    onClick={(e) => { e.preventDefault(); setMediaUrl(''); }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '8px',
+                                        right: '8px',
+                                        background: 'rgba(239, 68, 68, 0.9)',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '6px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    <X size={16} color="#fff" />
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <button className="neon-button" style={{ marginTop: '20px' }} onClick={handleUpdate} disabled={loading}>
