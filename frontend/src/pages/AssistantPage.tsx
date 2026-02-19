@@ -22,14 +22,23 @@ interface Message {
 }
 
 // Helper to parse bold text (**text**)
-const parseBold = (text: string) => {
+const parseBold = (text: string): React.ReactNode[] => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={i} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+            return <strong key={i}>{part.slice(2, -2)}</strong>;
         }
         return part;
     });
+};
+
+// Filter out page header/footer lines like "--- Page 1 of 50 ---"
+const isPageFooter = (line: string): boolean => {
+    const trimmed = line.trim();
+    return /^-{2,}\s*(Page\s+)?\d+\s*(of\s+\d+)?\s*-{2,}$/.test(trimmed) ||
+        /^---\s*Page\s+\d+\s*---$/.test(trimmed) ||
+        /^-{2,}\s*of\s+\d+\s+\d+\s*-{2,}$/.test(trimmed) ||
+        /^-{2,}\s*\d+\s+of\s+\d+\s*-{2,}$/.test(trimmed);
 };
 
 const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (manualId: string, page: number, title: string) => void }) => {
@@ -39,17 +48,34 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
         <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mb-8 ${isUser ? '' : 'bg-[rgba(85,107,47,0.05)] border-y border-[rgba(194,178,128,0.1)] py-6'}`}
+            style={{
+                marginBottom: '32px',
+                ...(isUser ? {} : {
+                    background: 'rgba(85,107,47,0.05)',
+                    borderTop: '1px solid rgba(194,178,128,0.1)',
+                    borderBottom: '1px solid rgba(194,178,128,0.1)',
+                    padding: '24px 0'
+                })
+            }}
         >
-            <div className="max-w-4xl mx-auto flex gap-5">
+            <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'flex', gap: '20px' }}>
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 200 }}
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg ${isUser
-                        ? 'bg-[rgba(255,255,255,0.08)]'
-                        : 'bg-gradient-to-br from-[#C2B280] to-[#8B7355] shadow-[0_0_20px_rgba(194,178,128,0.3)]'
-                        }`}
+                    style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        boxShadow: isUser ? 'none' : '0 0 20px rgba(194,178,128,0.3)',
+                        background: isUser
+                            ? 'rgba(255,255,255,0.08)'
+                            : 'linear-gradient(to bottom right, #C2B280, #8B7355)'
+                    }}
                 >
                     {isUser ? (
                         <User size={18} style={{ color: 'var(--color-text-muted)' }} />
@@ -58,15 +84,15 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
                     )}
                 </motion.div>
 
-                <div className="flex-1 space-y-4">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold" style={{ color: isUser ? 'var(--color-text-muted)' : 'var(--color-highlight)' }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: isUser ? 'var(--color-text-muted)' : 'var(--color-highlight)' }}>
                             {isUser ? 'أنت' : 'المساعد الفني الذكي'}
                         </span>
                         {!isUser && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: 'rgba(194,178,128,0.1)', border: '1px solid rgba(194,178,128,0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '50px', background: 'rgba(194,178,128,0.1)', border: '1px solid rgba(194,178,128,0.2)' }}>
                                 <Sparkles size={10} style={{ color: 'var(--color-highlight)' }} />
-                                <span className="text-[10px] font-bold" style={{ color: 'var(--color-highlight)' }}>AI</span>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-highlight)' }}>AI</span>
                             </div>
                         )}
                     </div>
@@ -74,28 +100,31 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
                     <div className="ai-message-content" dir="rtl" style={{ color: isUser ? 'var(--color-white)' : 'var(--color-text)' }}>
                         {message.content.split('\n').map((line, idx) => {
                             // Empty lines
-                            if (!line.trim()) return <div key={idx} className="h-2" />;
+                            if (!line.trim()) return <div key={idx} style={{ height: '8px' }} />;
+
+                            // Skip page headers/footers
+                            if (isPageFooter(line)) return null;
 
                             // Headers (### or ##)
                             if (line.startsWith('### ') || line.startsWith('## ')) {
                                 return (
-                                    <h3 key={idx} className="text-lg font-bold text-[var(--color-highlight)] mt-4 mb-2 border-b border-white/10 pb-1">
+                                    <div key={idx} className="message-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', marginTop: '16px' }}>
                                         {parseBold(line.replace(/^#+\s/, ''))}
-                                    </h3>
+                                    </div>
                                 );
                             }
 
                             // Horizontal Rule
                             if (line.trim() === '---') {
-                                return <hr key={idx} className="border-[var(--glass-border)] my-4" />;
+                                return <hr key={idx} style={{ border: 'none', borderTop: '1px solid var(--glass-border)', margin: '16px 0' }} />;
                             }
 
                             // Bullet Points
                             if (line.trim().startsWith('- ')) {
                                 return (
-                                    <div key={idx} className="flex items-start gap-2 mb-1 mr-4">
-                                        <span className="text-[var(--color-highlight)] mt-1.5">•</span>
-                                        <span className="leading-relaxed">{parseBold(line.trim().substring(2))}</span>
+                                    <div key={idx} className="message-list-item" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginRight: '16px' }}>
+                                        <span style={{ color: 'var(--color-highlight)', marginTop: '4px' }}>•</span>
+                                        <span style={{ lineHeight: '1.7' }}>{parseBold(line.trim().substring(2))}</span>
                                     </div>
                                 );
                             }
@@ -105,43 +134,44 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
                                 const match = line.trim().match(/^(\d+)\.\s(.*)/);
                                 if (match) {
                                     return (
-                                        <div key={idx} className="flex items-start gap-2 mb-2 mr-4">
-                                            <span className="text-[var(--color-highlight)] font-mono text-sm mt-0.5 min-w-[20px]">{match[1]}.</span>
-                                            <span className="leading-relaxed">{parseBold(match[2])}</span>
+                                        <div key={idx} className="message-list-item" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px', marginRight: '16px' }}>
+                                            <span style={{ color: 'var(--color-highlight)', fontFamily: 'monospace', fontSize: '14px', marginTop: '2px', minWidth: '20px' }}>{match[1]}.</span>
+                                            <span style={{ lineHeight: '1.7' }}>{parseBold(match[2])}</span>
                                         </div>
                                     );
                                 }
                             }
 
-                            // Special Blocks
+                            // Warning Blocks
                             if (line.startsWith('⚠️') || line.includes('تحذير:')) {
                                 return (
-                                    <div key={idx} className="bg-red-500/10 border-r-4 border-red-500 p-3 rounded my-2 text-white">
+                                    <div key={idx} className="message-warning">
                                         {parseBold(line)}
                                     </div>
                                 );
                             }
 
+                            // Tip/Info Blocks
                             if (line.startsWith('💡') || line.startsWith('📌')) {
                                 return (
-                                    <div key={idx} className="bg-blue-500/10 border-r-4 border-blue-500 p-3 rounded my-2 text-white">
+                                    <div key={idx} className="message-tip">
                                         {parseBold(line)}
                                     </div>
                                 );
                             }
 
-                            // Legacy Headers
-                            if (/^📖|🛠️|🚗|🔍/.test(line)) {
+                            // Emoji Headers (📖, 🛠️, 🚗, 🔍)
+                            if (/^(?:📖|🛠️|🚗|🔍)/.test(line)) {
                                 return (
-                                    <h3 key={idx} className="text-lg font-bold text-[var(--color-highlight)] mt-5 mb-3 flex items-center gap-2">
+                                    <div key={idx} className="message-header" style={{ marginTop: '20px' }}>
                                         {parseBold(line)}
-                                    </h3>
+                                    </div>
                                 );
                             }
 
                             // Default paragraph
                             return (
-                                <p key={idx} className="mb-2 leading-relaxed text-gray-200">
+                                <p key={idx} style={{ marginBottom: '8px', lineHeight: '1.7', color: '#e2e8f0' }}>
                                     {parseBold(line)}
                                 </p>
                             );
