@@ -122,23 +122,30 @@ router.post('/manuals/upload', authenticate, (req, res, next) => {
             const pdfParse = require('pdf-parse');
             const dataBuffer = fs.readFileSync(file.path);
 
-            // Parse PDF with timeout
+            // Parse PDF with timeout - increased to 200 pages for comprehensive content
             const parsePromise = pdfParse(dataBuffer, {
-                max: 50 // Limit to first 50 pages for large files
+                max: 200 // Extract up to 200 pages for thorough coverage
             });
 
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('PDF parsing timeout')), 30000) // 30 seconds
+                setTimeout(() => reject(new Error('PDF parsing timeout')), 60000) // 60 seconds for larger files
             );
 
             const pdfData = await Promise.race([parsePromise, timeoutPromise]) as any;
             pdfContent = pdfData.text || '';
-            console.log(`✅ Extracted ${pdfContent.length} characters from PDF`);
 
-            // Limit content to 100,000 characters to prevent database issues
-            if (pdfContent.length > 100000) {
-                console.log(`⚠️ Content too large (${pdfContent.length} chars), truncating to 100,000 chars`);
-                pdfContent = pdfContent.substring(0, 100000);
+            // Clean up extracted text - remove excessive whitespace/newlines
+            pdfContent = pdfContent
+                .replace(/\n{3,}/g, '\n\n')  // Reduce multiple newlines
+                .replace(/[ \t]{2,}/g, ' ')   // Reduce multiple spaces
+                .trim();
+
+            console.log(`✅ Extracted ${pdfContent.length} characters from PDF (${pdfData.numpages || '?'} pages)`);
+
+            // Limit content to 500,000 characters to prevent database issues
+            if (pdfContent.length > 500000) {
+                console.log(`⚠️ Content too large (${pdfContent.length} chars), truncating to 500,000 chars`);
+                pdfContent = pdfContent.substring(0, 500000);
             }
         } catch (pdfError: any) {
             console.error('⚠️ PDF parsing error:', pdfError.message);
@@ -151,16 +158,19 @@ router.post('/manuals/upload', authenticate, (req, res, next) => {
         // Save the vehicle ID directly in vehicle_type column for easy filtering on frontend
         const vehicleId = vehicle_type || null;
 
+        // ✅ NOW saving content to the database!
         const result = await pool.query(
-            `INSERT INTO technical_manuals (title, description, file_path, vehicle_type, uploaded_by, file_size)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO technical_manuals (title, description, file_path, vehicle_type, uploaded_by, file_size, content)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING *`,
-            [title, description || null, file.filename, vehicleId, userId, `${fileSizeMB} MB`]
+            [title, description || null, file.filename, vehicleId, userId, `${fileSizeMB} MB`, pdfContent || null]
         );
+
+        console.log(`📚 Manual saved: "${title}" with ${pdfContent.length} chars of content`);
 
         res.json({
             success: true,
-            message: 'تم رفع الكراسة بنجاح',
+            message: `تم رفع الكراسة بنجاح${pdfContent ? ` (تم استخراج ${pdfContent.length} حرف من المحتوى)` : ' (بدون محتوى نصي)'}`,
             data: result.rows[0]
         });
     } catch (error: any) {
