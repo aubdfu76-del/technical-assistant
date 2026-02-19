@@ -11,6 +11,7 @@ export interface Citation {
     doc_title: string;
     doc_id: string;
     page?: number;
+    pages?: number[];
     snippet: string;
     link?: string;
     type?: 'manual' | 'fault' | 'vehicle';

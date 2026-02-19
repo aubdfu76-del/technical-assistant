@@ -281,66 +281,54 @@ router.delete('/manuals/:id', authenticate, async (req, res) => {
 });
 
 // ============================================
-// 🖼️ Get Page Image Endpoint
+// 📄 Serve Manual PDF Endpoint
 // ============================================
-router.get('/manuals/:id/pages/:page', authenticate, async (req, res) => {
+router.get('/manuals/:id/pdf', authenticate, async (req, res) => {
     try {
-        const { id, page } = req.params;
-        const pageNum = parseInt(page);
+        const { id } = req.params;
         const pool = getPool();
 
-        // Get manual path
-        const result = await pool.query('SELECT file_path FROM technical_manuals WHERE id = $1', [id]);
+        // Get manual file path
+        const result = await pool.query('SELECT file_path, title FROM technical_manuals WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ success: false, message: 'الكراسة غير موجودة' });
         }
 
-        const filePath = result.rows[0].file_path;
+        const manual = result.rows[0];
+        const filePath = path.join(__dirname, '../../uploads/manuals', manual.file_path);
+
         if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ success: false, message: 'ملف PDF غير موجود' });
+            return res.status(404).json({ success: false, message: 'ملف PDF غير موجود على السيرفر' });
         }
 
-        // Render page to image using pdf-parse (which uses pdfjs-dist + canvas)
-        const { PDFParse } = require('pdf-parse');
-        const dataBuffer = fs.readFileSync(filePath);
+        const stat = fs.statSync(filePath);
 
-        // Configure standard fonts for rendering
-        const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
-        const standardFontDataUrl = path.join(pdfjsDistPath, 'standard_fonts/');
-
-        const parser = new PDFParse({
-            data: new Uint8Array(dataBuffer),
-            standardFontDataUrl
-        });
-
-        // Get screenshot of the specific page
-        // Note: pdf-parse pages are 1-based index in our API, but we need to check how it expects it
-        // The API says partial: [page]
-        const screenshotResult = await parser.getScreenshot({
-            partial: [pageNum],
-            scale: 1.5, // Better quality
-            imageBuffer: true,
-            imageDataUrl: false
-        });
-
-        if (!screenshotResult || !screenshotResult.pages || screenshotResult.pages.length === 0) {
-            return res.status(404).json({ success: false, message: 'الصفحة غير موجودة' });
-        }
-
-        const pageImage = screenshotResult.pages[0];
-
-        // Return image
         res.writeHead(200, {
-            'Content-Type': 'image/png',
-            'Content-Length': pageImage.data.length
+            'Content-Type': 'application/pdf',
+            'Content-Length': stat.size,
+            'Content-Disposition': `inline; filename="${encodeURIComponent(manual.title)}.pdf"`,
+            'Cache-Control': 'public, max-age=86400'
         });
-        res.end(Buffer.from(pageImage.data));
 
-        // Cleanup
-        try { await parser.destroy(); } catch (e) { }
+        const readStream = fs.createReadStream(filePath);
+        readStream.pipe(res);
 
     } catch (error: any) {
-        console.error('Page render error:', error);
+        console.error('PDF serve error:', error);
+        res.status(500).json({ success: false, message: 'فشل تحميل الملف' });
+    }
+});
+
+// ============================================
+// 🖼️ Get Page Image Endpoint (legacy - redirects to PDF)
+// ============================================
+router.get('/manuals/:id/pages/:page', authenticate, async (req, res) => {
+    try {
+        const { id, page } = req.params;
+        // Redirect to the PDF viewer with page number
+        res.redirect(`/api/ai/manuals/${id}/pdf#page=${page}`);
+    } catch (error: any) {
+        console.error('Page redirect error:', error);
         res.status(500).json({ success: false, message: 'فشل عرض الصفحة' });
     }
 });

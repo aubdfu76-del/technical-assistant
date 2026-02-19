@@ -11,6 +11,7 @@ export interface GeminiCitation {
     link?: string;
     type?: 'manual' | 'fault' | 'vehicle';
     page?: number;
+    pages?: number[];
 }
 
 export interface GeminiResponse {
@@ -140,6 +141,7 @@ ${hasContent ? `
 9. 📌 **اذكر مصدر المعلومة** (اسم الكراسة)
 10. 🔧 **إذا وجدت أرقام قطع غيار (Part Numbers) أو أدوات مطلوبة، اذكرها بوضوح**
 11. 📊 **إذا وجدت جداول أو قيم محددة، اعرضها بشكل منظم**
+12. 📄 **في نهاية إجابتك، أضف سطراً بعنوان "📄 الصفحات المرجعية:" واذكر أرقام الصفحات التي استخدمتها من الكراسة (مثال: صفحة 5، صفحة 12، صفحة 23)**
 
 **هام جداً:** لا تقل فقط "يوجد كراسة تحتوي على معلومات" - بل اعرض المعلومات نفسها بالتفصيل!
 
@@ -296,16 +298,48 @@ ${hasContent ? `
                         snippet = (start > 0 ? '...' : '') + m.content.substring(start, end).trim() + '...';
 
                         // Find page number
-                        // Search backwards from bestIndex for "--- Page X ---"
-                        // We extract the substring up to the match and find the last occurrence of the marker
                         const textBeforeMatch = m.content.substring(0, bestIndex);
                         const matches = [...textBeforeMatch.matchAll(/--- Page (\d+) ---/g)];
                         if (matches.length > 0) {
                             pageNumber = parseInt(matches[matches.length - 1][1]);
                         } else {
-                            // Maybe the first page marker is slightly after? or we are on page 1 implied?
                             pageNumber = 1;
                         }
+                    }
+                }
+
+                // Collect ALL page numbers from the content
+                const allPages: number[] = [];
+                if (m.content) {
+                    const pageMatches = [...m.content.matchAll(/--- Page (\d+) ---/g)];
+                    pageMatches.forEach(pm => {
+                        const pNum = parseInt(pm[1]);
+                        if (!allPages.includes(pNum)) allPages.push(pNum);
+                    });
+                }
+
+                // Find relevant pages (pages near keyword matches)
+                const relevantPages: number[] = [];
+                if (m.content && keywords.length > 0) {
+                    const contentLower = m.content.toLowerCase();
+                    for (const keyword of keywords) {
+                        let searchFrom = 0;
+                        while (searchFrom < contentLower.length) {
+                            const idx = contentLower.indexOf(keyword.toLowerCase(), searchFrom);
+                            if (idx < 0) break;
+                            // Find page for this match
+                            const textBefore = m.content.substring(0, idx);
+                            const pMatches = [...textBefore.matchAll(/--- Page (\d+) ---/g)];
+                            if (pMatches.length > 0) {
+                                const pNum = parseInt(pMatches[pMatches.length - 1][1]);
+                                if (!relevantPages.includes(pNum)) relevantPages.push(pNum);
+                            } else if (!relevantPages.includes(1)) {
+                                relevantPages.push(1);
+                            }
+                            searchFrom = idx + keyword.length;
+                            if (relevantPages.length >= 5) break; // Limit to 5 pages
+                        }
+                        if (relevantPages.length >= 5) break;
                     }
                 }
 
@@ -317,7 +351,7 @@ ${hasContent ? `
                             ? m.content_preview.substring(0, 150).trim() + '...'
                             : (m.description ? m.description.substring(0, 100) + '...' : 'ملف فني بصيغة PDF'));
 
-                    if (m.content) {
+                    if (m.content && !pageNumber) {
                         const match = /--- Page (\d+) ---/.exec(m.content);
                         if (match) pageNumber = parseInt(match[1]);
                     }
@@ -329,7 +363,8 @@ ${hasContent ? `
                     snippet,
                     link: `/uploads/manuals/${m.file_path.split(/[\\/]/).pop()}`,
                     type: 'manual',
-                    page: pageNumber
+                    page: pageNumber,
+                    pages: relevantPages.length > 0 ? relevantPages.sort((a, b) => a - b) : (pageNumber ? [pageNumber] : [])
                 });
             });
         }

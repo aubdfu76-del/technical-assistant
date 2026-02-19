@@ -9,7 +9,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { aiService } from '../services/ai.service';
 import type { Citation as AICitation, TechnicalManual } from '../services/ai.service';
 import { toast } from 'react-hot-toast';
-import { authService } from '../services/auth.service';
+import { authService, API_BASE_URL } from '../services/auth.service';
 import { vehiclesService } from '../services/vehicles.service';
 import '../styles/ai-message.css';
 
@@ -183,32 +183,97 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.2 }}
-                            className="mt-5 space-y-3"
+                            style={{ marginTop: '20px' }}
                         >
-                            <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--color-text-muted)' }}>
+                            {/* Page references section */}
+                            {message.citations.filter(c => c.type === 'manual' && c.pages && c.pages.length > 0).map((citation, cIdx) => (
+                                <div key={`pages-${cIdx}`} style={{
+                                    marginBottom: '16px',
+                                    background: 'rgba(194,178,128,0.05)',
+                                    border: '1px solid rgba(194,178,128,0.15)',
+                                    borderRadius: '12px',
+                                    padding: '16px',
+                                }} dir="rtl">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                        <Book size={16} style={{ color: 'var(--color-highlight)' }} />
+                                        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-highlight)' }}>
+                                            📄 المراجع من: {citation.doc_title}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        {citation.pages!.map((pageNum) => (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => onViewPage(citation.doc_id, pageNum, citation.doc_title)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '10px 16px',
+                                                    borderRadius: '10px',
+                                                    border: '1px solid rgba(194,178,128,0.3)',
+                                                    background: 'linear-gradient(135deg, rgba(194,178,128,0.1), rgba(194,178,128,0.05))',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.3s ease',
+                                                    color: 'var(--color-white)',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-highlight)';
+                                                    (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(194,178,128,0.2), rgba(194,178,128,0.1))';
+                                                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 15px rgba(194,178,128,0.2)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(194,178,128,0.3)';
+                                                    (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(194,178,128,0.1), rgba(194,178,128,0.05))';
+                                                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
+                                                }}
+                                            >
+                                                <FileText size={16} style={{ color: 'var(--color-highlight)' }} />
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '13px', fontWeight: 600 }}>صفحة {pageNum}</div>
+                                                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>اضغط لعرض الصفحة</div>
+                                                </div>
+                                                <Eye size={14} style={{ color: 'var(--color-highlight)', opacity: 0.7 }} />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Source cards */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '8px' }}>
                                 <Search size={12} />
                                 <span>المصادر المستخدمة</span>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
                                 {message.citations.map((citation, idx) => (
-                                    <motion.a
+                                    <motion.div
                                         key={idx}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.1 * idx }}
-                                        href={citation.link || '#'}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="glass-card group flex items-start gap-3 p-4 hover:border-[var(--color-highlight)] transition-all cursor-pointer relative"
-                                        style={{ borderColor: 'var(--glass-border)' }}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '10px',
+                                            border: '1px solid var(--glass-border)',
+                                            background: 'var(--glass-bg)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '12px',
+                                            transition: 'border-color 0.2s ease',
+                                        }}
+                                        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-highlight)'; }}
+                                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--glass-border)'; }}
                                     >
-                                        <div className={`p-2 rounded-lg ${citation.type === 'manual'
-                                            ? 'bg-[rgba(59,130,246,0.1)]'
-                                            : citation.type === 'fault'
-                                                ? 'bg-[rgba(239,68,68,0.1)]'
-                                                : 'bg-[rgba(168,85,247,0.1)]'
-                                            }`}>
+                                        <div style={{
+                                            padding: '8px',
+                                            borderRadius: '8px',
+                                            background: citation.type === 'manual' ? 'rgba(59,130,246,0.1)' : citation.type === 'fault' ? 'rgba(239,68,68,0.1)' : 'rgba(168,85,247,0.1)',
+                                        }}>
                                             {citation.type === 'manual' ? (
                                                 <Book size={16} style={{ color: '#3b82f6' }} />
                                             ) : citation.type === 'fault' ? (
@@ -218,19 +283,19 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
                                             )}
                                         </div>
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between">
-                                                <div className="text-sm font-semibold truncate group-hover:text-[var(--color-highlight)] transition-colors" style={{ color: 'var(--color-white)' }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-white)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     {citation.doc_title}
                                                 </div>
                                                 {citation.type === 'manual' && citation.page && (
-                                                    <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">
+                                                    <span style={{ fontSize: '10px', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', padding: '2px 6px', borderRadius: '4px' }}>
                                                         ص {citation.page}
                                                     </span>
                                                 )}
                                             </div>
 
-                                            <div className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>
+                                            <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--color-text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                 {citation.snippet}
                                             </div>
 
@@ -241,15 +306,26 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
                                                         e.stopPropagation();
                                                         onViewPage(citation.doc_id, citation.page!, citation.doc_title);
                                                     }}
-                                                    className="mt-2 text-xs flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors"
-                                                    style={{ color: 'var(--color-highlight)' }}
+                                                    style={{
+                                                        marginTop: '8px',
+                                                        fontSize: '11px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '6px',
+                                                        background: 'rgba(255,255,255,0.05)',
+                                                        border: 'none',
+                                                        color: 'var(--color-highlight)',
+                                                        cursor: 'pointer',
+                                                    }}
                                                 >
                                                     <Eye size={12} />
                                                     عرض الصفحة
                                                 </button>
                                             )}
                                         </div>
-                                    </motion.a>
+                                    </motion.div>
                                 ))}
                             </div>
                         </motion.div>
@@ -793,28 +869,32 @@ const AssistantPage = () => {
                 maxWidth="900px"
             >
                 {viewingPage && (
-                    <div className="flex flex-col items-center p-4 bg-black/50 min-h-[500px]">
-                        <div className="relative w-full h-full flex justify-center">
-                            <img
-                                src={`/api/ai/manuals/${viewingPage.manualId}/pages/${viewingPage.page}`}
-                                alt={`Page ${viewingPage.page}`}
-                                className="max-w-full h-auto rounded shadow-lg border border-white/10"
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '';
-                                    toast.error('فشل تحميل الصورة');
-                                }}
-                            />
-                        </div>
-                        <div className="mt-4 flex gap-4">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', background: 'rgba(0,0,0,0.5)', minHeight: '600px' }}>
+                        <iframe
+                            src={`${API_BASE_URL}/ai/manuals/${viewingPage.manualId}/pdf#page=${viewingPage.page}`}
+                            style={{
+                                width: '100%',
+                                height: '600px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                background: 'white',
+                            }}
+                            title={`${viewingPage.title} - صفحة ${viewingPage.page}`}
+                        />
+                        <div style={{ marginTop: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
                             <a
-                                href={`/api/ai/manuals/${viewingPage.manualId}/pages/${viewingPage.page}`}
+                                href={`${API_BASE_URL}/ai/manuals/${viewingPage.manualId}/pdf#page=${viewingPage.page}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="neon-button text-sm px-4 py-2"
+                                className="neon-button"
+                                style={{ padding: '8px 16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
                             >
-                                <Eye size={16} className="mr-2" />
-                                فتح في تبويب جديد
+                                <Eye size={16} />
+                                فتح PDF في تبويب جديد
                             </a>
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                                📄 صفحة {viewingPage.page}
+                            </span>
                         </div>
                     </div>
                 )}
