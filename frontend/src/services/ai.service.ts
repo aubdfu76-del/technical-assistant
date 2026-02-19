@@ -59,6 +59,11 @@ class AIService {
     async deleteManual(id: string): Promise<void> {
         await api.delete(`/ai/manuals/${id}`);
     }
+
+    async reprocessManual(id: string): Promise<any> {
+        const response = await api.post(`/ai/manuals/${id}/reprocess`);
+        return response.data;
+    }
 }
 
 export const aiService = new AIService();

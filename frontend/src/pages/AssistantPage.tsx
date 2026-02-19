@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     Send, User, FileText, Sparkles, Loader2,
-    Wrench, Upload, Book, X, Search, Brain, Plus, Trash2, Car
+    Wrench, Upload, Book, X, Search, Brain, Plus, Trash2, Car, RefreshCw
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { aiService } from '../services/ai.service';
@@ -422,6 +422,7 @@ const AssistantPage = () => {
     const [manuals, setManuals] = useState<TechnicalManual[]>([]);
     const [vehicles, setVehicles] = useState<any[]>([]);
     const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+    const [reprocessingId, setReprocessingId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -494,6 +495,22 @@ const AssistantPage = () => {
         }
     };
 
+    const handleReprocess = async (manualId: string) => {
+        setReprocessingId(manualId);
+        try {
+            const result = await aiService.reprocessManual(manualId);
+            if (result.success) {
+                toast.success(result.message || 'تم إعادة معالجة الكراسة بنجاح!');
+            } else {
+                toast.error(result.message || 'فشل إعادة المعالجة');
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'فشل إعادة معالجة الكراسة');
+        } finally {
+            setReprocessingId(null);
+        }
+    };
+
     return (
         <DashboardLayout>
             <div style={{ display: 'flex', gap: '20px', height: 'calc(100vh - 120px)' }}>
@@ -545,24 +562,37 @@ const AssistantPage = () => {
                                     <Book size={16} style={{ color: 'var(--color-primary)' }} />
                                     <span className="text-sm truncate flex-1" style={{ color: 'var(--color-text)' }}>{manual.title}</span>
                                     {canEdit && (
-                                        <button
-                                            onClick={async (e) => {
-                                                e.stopPropagation();
-                                                if (window.confirm(`هل أنت متأكد من حذف الكراسة "${manual.title}"؟`)) {
-                                                    try {
-                                                        await aiService.deleteManual(manual.id);
-                                                        toast.success('تم حذف الكراسة بنجاح');
-                                                        loadManuals();
-                                                    } catch (error: any) {
-                                                        toast.error(error.response?.data?.message || 'فشل حذف الكراسة');
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleReprocess(manual.id);
+                                                }}
+                                                disabled={reprocessingId === manual.id}
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-blue-500/20 transition-all"
+                                                title="إعادة استخراج المحتوى"
+                                            >
+                                                <RefreshCw size={14} className={reprocessingId === manual.id ? 'animate-spin' : ''} style={{ color: '#3b82f6' }} />
+                                            </button>
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`هل أنت متأكد من حذف الكراسة "${manual.title}"؟`)) {
+                                                        try {
+                                                            await aiService.deleteManual(manual.id);
+                                                            toast.success('تم حذف الكراسة بنجاح');
+                                                            loadManuals();
+                                                        } catch (error: any) {
+                                                            toast.error(error.response?.data?.message || 'فشل حذف الكراسة');
+                                                        }
                                                     }
-                                                }
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-red-500/20 transition-all"
-                                            title="حذف الكراسة"
-                                        >
-                                            <Trash2 size={14} style={{ color: '#ef4444' }} />
-                                        </button>
+                                                }}
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-red-500/20 transition-all"
+                                                title="حذف الكراسة"
+                                            >
+                                                <Trash2 size={14} style={{ color: '#ef4444' }} />
+                                            </button>
+                                        </div>
                                     )}
                                 </motion.div>
                             ))

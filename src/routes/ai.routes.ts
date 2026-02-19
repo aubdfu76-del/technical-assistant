@@ -262,4 +262,145 @@ router.delete('/manuals/:id', authenticate, async (req, res) => {
     }
 });
 
+// ============================================
+// 🔍 Debug endpoint - Check AI system status
+// ============================================
+router.get('/debug', authenticate, async (req, res) => {
+    try {
+        const pool = getPool();
+
+        // Check manuals and their content status
+        const manualsResult = await pool.query(`
+            SELECT id, title, file_path, 
+                   CASE WHEN content IS NOT NULL AND LENGTH(content) > 0 THEN LENGTH(content) ELSE 0 END as content_length,
+                   CASE WHEN content IS NOT NULL AND LENGTH(content) > 0 THEN true ELSE false END as has_content,
+                   created_at
+            FROM technical_manuals 
+            ORDER BY created_at DESC
+        `);
+
+        // Check Gemini status
+        const { geminiService } = await import('../services/gemini.service');
+        const geminiInitialized = !!(geminiService as any).model;
+
+        res.json({
+            success: true,
+            gemini: {
+                initialized: geminiInitialized,
+                api_key_set: !!process.env.GEMINI_API_KEY,
+                model: process.env.GEMINI_MODEL || 'gemini-1.5-flash'
+            },
+            manuals: manualsResult.rows.map(m => ({
+                id: m.id,
+                title: m.title,
+                has_content: m.has_content,
+                content_length: m.content_length,
+                file_exists: fs.existsSync(path.join(__dirname, '../../uploads/manuals', m.file_path)),
+                created_at: m.created_at
+            })),
+            total_manuals: manualsResult.rows.length,
+            manuals_with_content: manualsResult.rows.filter((m: any) => m.has_content).length
+        });
+    } catch (error: any) {
+        console.error('Debug error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// 🔄 Reprocess manual - Re-extract PDF content
+// ============================================
+router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pool = getPool();
+
+        // Get manual info
+        const manual = await pool.query(
+            'SELECT id, title, file_path FROM technical_manuals WHERE id = $1',
+            [id]
+        );
+
+        if (manual.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'الكراسة غير موجودة'
+            });
+        }
+
+        const manualData = manual.rows[0];
+        const filePath = path.join(__dirname, '../../uploads/manuals', manualData.file_path);
+
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({
+                success: false,
+                message: 'ملف PDF غير موجود على السيرفر. يرجى إعادة رفع الكراسة.'
+            });
+        }
+
+        console.log(`🔄 Reprocessing manual: "${manualData.title}" (${manualData.file_path})`);
+
+        // Extract text from PDF
+        let pdfContent = '';
+        const pdfParse = require('pdf-parse');
+        const dataBuffer = fs.readFileSync(filePath);
+
+        const parsePromise = pdfParse(dataBuffer, {
+            max: 200 // Up to 200 pages
+        });
+
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('PDF parsing timeout - الملف كبير جداً')), 120000) // 2 minutes
+        );
+
+        const pdfData = await Promise.race([parsePromise, timeoutPromise]) as any;
+        pdfContent = pdfData.text || '';
+
+        // Clean up text
+        pdfContent = pdfContent
+            .replace(/\n{3,}/g, '\n\n')
+            .replace(/[ \t]{2,}/g, ' ')
+            .trim();
+
+        // Limit to 500K chars
+        if (pdfContent.length > 500000) {
+            pdfContent = pdfContent.substring(0, 500000);
+        }
+
+        console.log(`✅ Extracted ${pdfContent.length} characters from "${manualData.title}" (${pdfData.numpages || '?'} pages)`);
+
+        if (pdfContent.length === 0) {
+            return res.json({
+                success: false,
+                message: 'لم يتم العثور على نص قابل للاستخراج في الملف. قد يكون الملف يحتوي على صور فقط.'
+            });
+        }
+
+        // Update database with extracted content
+        await pool.query(
+            'UPDATE technical_manuals SET content = $1 WHERE id = $2',
+            [pdfContent, id]
+        );
+
+        console.log(`💾 Saved ${pdfContent.length} chars to database for "${manualData.title}"`);
+
+        res.json({
+            success: true,
+            message: `تم إعادة معالجة الكراسة بنجاح! تم استخراج ${pdfContent.length.toLocaleString()} حرف من ${pdfData.numpages || '?'} صفحة.`,
+            data: {
+                content_length: pdfContent.length,
+                pages: pdfData.numpages || 0,
+                preview: pdfContent.substring(0, 200) + '...'
+            }
+        });
+    } catch (error: any) {
+        console.error('Reprocess error:', error);
+        res.status(500).json({
+            success: false,
+            message: `فشل إعادة معالجة الكراسة: ${error.message}`
+        });
+    }
+});
+
 export default router;
