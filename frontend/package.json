@@ -13,6 +13,7 @@
     "axios": "^1.13.3",
     "framer-motion": "^12.28.1",
     "lucide-react": "^0.562.0",
+    "pdfjs-dist": "^3.11.174",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",

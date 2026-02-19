@@ -121,46 +121,69 @@ router.post('/manuals/upload', authenticate, (req, res, next) => {
 
         const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
 
-        // Extract text from PDF with timeout protection
+        // Extract text from PDF with page markers using pdfjs-dist directly
         let pdfContent = '';
         try {
             console.log(`📄 Starting PDF extraction for file: ${file.filename} (${fileSizeMB}MB)`);
-            const { PDFParse } = require('pdf-parse');
             const dataBuffer = fs.readFileSync(file.path);
 
-            // Parse PDF with timeout using pdf-parse v2 class API
-            // Configure CMap and standard fonts for correct Arabic text extraction
             const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
-            const cMapUrl = path.join(pdfjsDistPath, 'cmaps/');
-            const standardFontDataUrl = path.join(pdfjsDistPath, 'standard_fonts/');
+            const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 
-            const parser = new PDFParse({
+            // Disable workers for server-side usage
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
+            const loadingTask = pdfjsLib.getDocument({
                 data: new Uint8Array(dataBuffer),
-                cMapUrl,
+                cMapUrl: path.join(pdfjsDistPath, 'cmaps/'),
                 cMapPacked: true,
-                standardFontDataUrl
+                standardFontDataUrl: path.join(pdfjsDistPath, 'standard_fonts/'),
+                useWorkerFetch: false,
+                isEvalSupported: false,
+                useSystemFonts: true,
             });
-            const parsePromise = parser.getText({ first: 200 });
 
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('PDF parsing timeout')), 60000) // 60 seconds for larger files
+                setTimeout(() => reject(new Error('PDF parsing timeout')), 120000) // 2 min timeout
             );
 
-            const textResult = await Promise.race([parsePromise, timeoutPromise]) as any;
-            pdfContent = textResult.text || '';
+            const doc = await Promise.race([loadingTask.promise, timeoutPromise]) as any;
+            const maxPages = Math.min(doc.numPages, 100);
 
-            // Clean up extracted text - remove excessive whitespace/newlines
-            pdfContent = pdfContent
-                .replace(/\n{3,}/g, '\n\n')  // Reduce multiple newlines
-                .replace(/[ \t]{2,}/g, ' ')   // Reduce multiple spaces
-                .trim();
+            console.log(`📖 Extracting text from ${maxPages} pages with page markers...`);
 
-            // Cleanup parser
-            try { await parser.destroy(); } catch (e) { }
+            for (let i = 1; i <= maxPages; i++) {
+                try {
+                    const page = await doc.getPage(i);
+                    const textContent = await page.getTextContent();
 
-            console.log(`✅ Extracted ${pdfContent.length} characters from PDF (${textResult.total || '?'} pages)`);
+                    let pageText = '';
+                    let lastY: number | null = null;
 
-            // Limit content to 500,000 characters to prevent database issues
+                    for (const item of textContent.items) {
+                        if (item.str) {
+                            if (lastY !== null && Math.abs(lastY - (item as any).transform[5]) > 5) {
+                                pageText += '\n';
+                            }
+                            pageText += item.str;
+                            lastY = (item as any).transform[5];
+                        }
+                    }
+
+                    pdfContent += `--- Page ${i} ---\n${pageText.trim()}\n\n`;
+                } catch (pageError) {
+                    console.error(`⚠️ Error extracting page ${i}:`, pageError);
+                    pdfContent += `--- Page ${i} ---\n[فشل استخراج النص]\n\n`;
+                }
+            }
+
+            // Cleanup
+            try { await doc.cleanup(); } catch (e) { }
+            try { await doc.destroy(); } catch (e) { }
+
+            console.log(`✅ Extracted ${pdfContent.length} characters from ${maxPages} pages with page markers`);
+
+            // Limit content to 500,000 characters
             if (pdfContent.length > 500000) {
                 console.log(`⚠️ Content too large (${pdfContent.length} chars), truncating to 500,000 chars`);
                 pdfContent = pdfContent.substring(0, 500000);
@@ -303,9 +326,9 @@ router.get('/manuals/:id/pdf', authenticate, async (req, res) => {
 
         const stat = fs.statSync(filePath);
 
-        res.writeHead(200, {
+        res.set({
             'Content-Type': 'application/pdf',
-            'Content-Length': stat.size,
+            'Content-Length': String(stat.size),
             'Content-Disposition': `inline; filename="${encodeURIComponent(manual.title)}.pdf"`,
             'Cache-Control': 'public, max-age=86400'
         });
@@ -409,94 +432,119 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
 
         console.log(`🔄 Reprocessing manual: "${manualData.title}" (${manualData.file_path})`);
 
-        // 1. Render pages to images first
-        const { PDFParse } = require('pdf-parse');
+        // Use pdf-parse to extract text page by page with page markers
+        const pdfParse = require('pdf-parse');
         const dataBuffer = fs.readFileSync(filePath);
-        const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
 
-        const parser = new PDFParse({
-            data: new Uint8Array(dataBuffer),
-            standardFontDataUrl: path.join(pdfjsDistPath, 'standard_fonts/'),
-            cMapUrl: path.join(pdfjsDistPath, 'cmaps/'),
-            cMapPacked: true
-        });
+        // Custom page render to add page markers
+        const pageTexts: string[] = [];
 
-        // Get screenshots of first 30 pages (to ensure we get enough content without hitting timeouts)
-        // For full manual indexing we would need background job queues
-        const maxPagesToProcess = 30;
-        const pageNumbers = Array.from({ length: maxPagesToProcess }, (_, i) => i + 1);
-
-        console.log(`📸 Rendering first ${maxPagesToProcess} pages to images for OCR...`);
-        const screenshots = await parser.getScreenshot({
-            partial: pageNumbers,
-            scale: 1.5, // Good quality for OCR
-            imageBuffer: true
-        });
-
-        // 2. OCR using Gemini Vision
-        let fullText = '';
-        console.log(`👁️ Starting Gemini Vision OCR on ${screenshots.pages.length} pages...`);
-
-        // Initialize Gemini model locally for this request or import global one
-        // Ideally prompt should be imported, but we'll instantiate for safety here if imports fail
-        const { GoogleGenerativeAI } = require('@google/generative-ai');
-        const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-        // Process in batches of 3 to avoid rate limits
-        const batchSize = 3;
-        for (let i = 0; i < screenshots.pages.length; i += batchSize) {
-            const batch = screenshots.pages.slice(i, i + batchSize);
-            const batchPromises = batch.map(async (page: any) => {
-                try {
-                    // Convert buffer to base64
-                    const base64Image = Buffer.from(page.data).toString('base64');
-
-                    const result = await model.generateContent([
-                        "عليك استخراج النص العربي والإنجليزي من هذه الصفحة بدقة عالية جداً. حافظ على التنسيق والأرقام. هذا دليل فني للصيانة.",
-                        {
-                            inlineData: {
-                                data: base64Image,
-                                mimeType: "image/png"
-                            }
+        const options = {
+            // Custom page rendering function that captures each page's text
+            pagerender: function (pageData: any) {
+                return pageData.getTextContent().then(function (textContent: any) {
+                    let lastY: number | null = null;
+                    let text = '';
+                    for (const item of textContent.items) {
+                        if (lastY !== null && Math.abs(lastY - item.transform[5]) > 5) {
+                            text += '\n';
                         }
-                    ]);
-                    const response = await result.response;
-                    return `--- Page ${page.pageNumber} ---\n${response.text()}\n`;
-                } catch (e) {
-                    console.error(`Error OCRing page ${page.pageNumber}:`, e);
-                    return '';
+                        text += item.str;
+                        lastY = item.transform[5];
+                    }
+                    return text;
+                });
+            }
+        };
+
+        console.log(`📄 Extracting text page by page...`);
+
+        const pdfData = await pdfParse(dataBuffer, options);
+        const totalPages = pdfData.numpages;
+
+        // Now re-parse with our custom approach to get per-page text
+        // pdf-parse concatenates all pages, so we need a different approach
+        // Let's use the raw text and try to add page markers
+
+        // Alternative: Use pdfjs-dist directly for page-by-page extraction
+        const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
+        const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+
+        // Disable workers for server-side usage
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
+        const loadingTask = pdfjsLib.getDocument({
+            data: new Uint8Array(dataBuffer),
+            cMapUrl: path.join(pdfjsDistPath, 'cmaps/'),
+            cMapPacked: true,
+            standardFontDataUrl: path.join(pdfjsDistPath, 'standard_fonts/'),
+            useWorkerFetch: false,
+            isEvalSupported: false,
+            useSystemFonts: true,
+        });
+
+        const doc = await loadingTask.promise;
+        let fullText = '';
+        const maxPages = Math.min(doc.numPages, 100); // Process up to 100 pages
+
+        console.log(`📖 Processing ${maxPages} of ${doc.numPages} pages...`);
+
+        for (let i = 1; i <= maxPages; i++) {
+            try {
+                const page = await doc.getPage(i);
+                const textContent = await page.getTextContent();
+
+                let pageText = '';
+                let lastY: number | null = null;
+
+                for (const item of textContent.items) {
+                    if (item.str) {
+                        if (lastY !== null && Math.abs(lastY - (item as any).transform[5]) > 5) {
+                            pageText += '\n';
+                        }
+                        pageText += item.str;
+                        lastY = (item as any).transform[5];
+                    }
                 }
-            });
 
-            // Add slight delay between batches
-            if (i > 0) await new Promise(r => setTimeout(r, 2000));
+                // Add page marker
+                fullText += `--- Page ${i} ---\n${pageText.trim()}\n\n`;
 
-            const batchResults = await Promise.all(batchPromises);
-            fullText += batchResults.join('\n');
-            console.log(`✅ Processed batch ${i / batchSize + 1}`);
+                if (i % 10 === 0) {
+                    console.log(`✅ Processed ${i}/${maxPages} pages`);
+                }
+            } catch (pageError) {
+                console.error(`⚠️ Error processing page ${i}:`, pageError);
+                fullText += `--- Page ${i} ---\n[فشل استخراج النص من هذه الصفحة]\n\n`;
+            }
         }
 
-        // Cleanup parser
-        try { await parser.destroy(); } catch (e) { }
+        // Cleanup
+        try { await doc.cleanup(); } catch (e) { }
+        try { await doc.destroy(); } catch (e) { }
 
         if (fullText.length === 0) {
-            return res.json({ success: false, message: 'فشل استخراج النص من الصور' });
+            return res.json({ success: false, message: 'فشل استخراج النص من الملف' });
+        }
+
+        // Limit content
+        if (fullText.length > 500000) {
+            fullText = fullText.substring(0, 500000);
         }
 
         // Update database
         await pool.query('UPDATE technical_manuals SET content = $1 WHERE id = $2', [fullText, id]);
 
-        console.log(`💾 Saved ${fullText.length} chars (OCR) for "${manualData.title}"`);
+        console.log(`💾 Saved ${fullText.length} chars with page markers for "${manualData.title}"`);
 
         res.json({
             success: true,
-            message: `تم إعادة معالجة الكراسة باستخدام AI OCR! تم استخراج نص دقيق من ${screenshots.pages.length} صفحة.`,
+            message: `تم إعادة معالجة الكراسة بنجاح! تم استخراج النص من ${maxPages} صفحة مع ترقيم الصفحات.`,
             data: {
                 content_length: fullText.length,
-                pages: screenshots.pages.length,
-                preview: fullText.substring(0, 200) + '...'
+                pages_processed: maxPages,
+                total_pages: doc.numPages,
+                preview: fullText.substring(0, 300) + '...'
             }
         });
 

@@ -5,6 +5,7 @@ import {
     Wrench, Upload, Book, X, Search, Brain, Plus, Trash2, Car, RefreshCw, Eye
 } from 'lucide-react';
 import { Modal } from '../components/Modal';
+import PdfPageViewer from '../components/PdfPageViewer';
 import DashboardLayout from '../components/DashboardLayout';
 import { aiService } from '../services/ai.service';
 import type { Citation as AICitation, TechnicalManual } from '../services/ai.service';
@@ -185,60 +186,18 @@ const ChatBubble = ({ message, onViewPage }: { message: Message, onViewPage: (ma
                             transition={{ delay: 0.2 }}
                             style={{ marginTop: '20px' }}
                         >
-                            {/* Page references section */}
+                            {/* Inline page images from referenced manuals */}
                             {message.citations.filter(c => c.type === 'manual' && c.pages && c.pages.length > 0).map((citation, cIdx) => (
-                                <div key={`pages-${cIdx}`} style={{
-                                    marginBottom: '16px',
-                                    background: 'rgba(194,178,128,0.05)',
-                                    border: '1px solid rgba(194,178,128,0.15)',
-                                    borderRadius: '12px',
-                                    padding: '16px',
-                                }} dir="rtl">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                                        <Book size={16} style={{ color: 'var(--color-highlight)' }} />
-                                        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-highlight)' }}>
-                                            📄 المراجع من: {citation.doc_title}
-                                        </span>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                        {citation.pages!.map((pageNum) => (
-                                            <button
-                                                key={pageNum}
-                                                onClick={() => onViewPage(citation.doc_id, pageNum, citation.doc_title)}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    padding: '10px 16px',
-                                                    borderRadius: '10px',
-                                                    border: '1px solid rgba(194,178,128,0.3)',
-                                                    background: 'linear-gradient(135deg, rgba(194,178,128,0.1), rgba(194,178,128,0.05))',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.3s ease',
-                                                    color: 'var(--color-white)',
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-highlight)';
-                                                    (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(194,178,128,0.2), rgba(194,178,128,0.1))';
-                                                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 15px rgba(194,178,128,0.2)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(194,178,128,0.3)';
-                                                    (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(194,178,128,0.1), rgba(194,178,128,0.05))';
-                                                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                                                    (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
-                                                }}
-                                            >
-                                                <FileText size={16} style={{ color: 'var(--color-highlight)' }} />
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: '13px', fontWeight: 600 }}>صفحة {pageNum}</div>
-                                                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>اضغط لعرض الصفحة</div>
-                                                </div>
-                                                <Eye size={14} style={{ color: 'var(--color-highlight)', opacity: 0.7 }} />
-                                            </button>
-                                        ))}
-                                    </div>
+                                <div key={`pages-${cIdx}`} style={{ marginTop: '16px' }}>
+                                    {citation.pages!.map((pageNum) => (
+                                        <PdfPageViewer
+                                            key={`${citation.doc_id}-p${pageNum}`}
+                                            manualId={citation.doc_id}
+                                            pageNumber={pageNum}
+                                            title={citation.doc_title}
+                                            onClickFullSize={() => onViewPage(citation.doc_id, pageNum, citation.doc_title)}
+                                        />
+                                    ))}
                                 </div>
                             ))}
 
