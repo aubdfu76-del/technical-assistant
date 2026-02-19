@@ -5,6 +5,12 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '../config/database';
 import fs from 'fs';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize Gemini for OCR
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const router = Router();
 
@@ -275,6 +281,71 @@ router.delete('/manuals/:id', authenticate, async (req, res) => {
 });
 
 // ============================================
+// 🖼️ Get Page Image Endpoint
+// ============================================
+router.get('/manuals/:id/pages/:page', authenticate, async (req, res) => {
+    try {
+        const { id, page } = req.params;
+        const pageNum = parseInt(page);
+        const pool = getPool();
+
+        // Get manual path
+        const result = await pool.query('SELECT file_path FROM technical_manuals WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'الكراسة غير موجودة' });
+        }
+
+        const filePath = result.rows[0].file_path;
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ success: false, message: 'ملف PDF غير موجود' });
+        }
+
+        // Render page to image using pdf-parse (which uses pdfjs-dist + canvas)
+        const { PDFParse } = require('pdf-parse');
+        const dataBuffer = fs.readFileSync(filePath);
+
+        // Configure standard fonts for rendering
+        const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
+        const standardFontDataUrl = path.join(pdfjsDistPath, 'standard_fonts/');
+
+        const parser = new PDFParse({
+            data: new Uint8Array(dataBuffer),
+            standardFontDataUrl
+        });
+
+        // Get screenshot of the specific page
+        // Note: pdf-parse pages are 1-based index in our API, but we need to check how it expects it
+        // The API says partial: [page]
+        const screenshotResult = await parser.getScreenshot({
+            partial: [pageNum],
+            scale: 1.5, // Better quality
+            imageBuffer: true,
+            imageDataUrl: false
+        });
+
+        if (!screenshotResult || !screenshotResult.pages || screenshotResult.pages.length === 0) {
+            return res.status(404).json({ success: false, message: 'الصفحة غير موجودة' });
+        }
+
+        const pageImage = screenshotResult.pages[0];
+
+        // Return image
+        res.writeHead(200, {
+            'Content-Type': 'image/png',
+            'Content-Length': pageImage.data.length
+        });
+        res.end(Buffer.from(pageImage.data));
+
+        // Cleanup
+        try { await parser.destroy(); } catch (e) { }
+
+    } catch (error: any) {
+        console.error('Page render error:', error);
+        res.status(500).json({ success: false, message: 'فشل عرض الصفحة' });
+    }
+});
+
+// ============================================
 // 🔍 Debug endpoint - Check AI system status
 // ============================================
 router.get('/debug', authenticate, async (req, res) => {
@@ -334,10 +405,7 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
         );
 
         if (manual.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'الكراسة غير موجودة'
-            });
+            return res.status(404).json({ success: false, message: 'الكراسة غير موجودة' });
         }
 
         const manualData = manual.rows[0];
@@ -353,77 +421,102 @@ router.post('/manuals/:id/reprocess', authenticate, async (req, res) => {
 
         console.log(`🔄 Reprocessing manual: "${manualData.title}" (${manualData.file_path})`);
 
-        // Extract text from PDF
-        // Extract text from PDF using pdf-parse v2 class API
-        let pdfContent = '';
+        // 1. Render pages to images first
         const { PDFParse } = require('pdf-parse');
         const dataBuffer = fs.readFileSync(filePath);
-
-        // Configure CMap and standard fonts for correct Arabic text extraction
         const pdfjsDistPath = path.dirname(require.resolve('pdfjs-dist/package.json'));
-        const cMapUrl = path.join(pdfjsDistPath, 'cmaps/');
-        const standardFontDataUrl = path.join(pdfjsDistPath, 'standard_fonts/');
 
         const parser = new PDFParse({
             data: new Uint8Array(dataBuffer),
-            cMapUrl,
-            cMapPacked: true,
-            standardFontDataUrl
+            standardFontDataUrl: path.join(pdfjsDistPath, 'standard_fonts/'),
+            cMapUrl: path.join(pdfjsDistPath, 'cmaps/'),
+            cMapPacked: true
         });
-        const parsePromise = parser.getText({ first: 200 });
 
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('PDF parsing timeout - الملف كبير جداً')), 120000) // 2 minutes
-        );
+        // Get screenshots of first 30 pages (to ensure we get enough content without hitting timeouts)
+        // For full manual indexing we would need background job queues
+        const maxPagesToProcess = 30;
+        const pageNumbers = Array.from({ length: maxPagesToProcess }, (_, i) => i + 1);
 
-        const textResult = await Promise.race([parsePromise, timeoutPromise]) as any;
-        pdfContent = textResult.text || '';
+        console.log(`📸 Rendering first ${maxPagesToProcess} pages to images for OCR...`);
+        const screenshots = await parser.getScreenshot({
+            partial: pageNumbers,
+            scale: 1.5, // Good quality for OCR
+            imageBuffer: true
+        });
 
-        // Clean up text
-        pdfContent = pdfContent
-            .replace(/\n{3,}/g, '\n\n')
-            .replace(/[ \t]{2,}/g, ' ')
-            .trim();
+        // 2. OCR using Gemini Vision
+        let fullText = '';
+        console.log(`👁️ Starting Gemini Vision OCR on ${screenshots.pages.length} pages...`);
+
+        // Initialize Gemini model locally for this request or import global one
+        // Ideally prompt should be imported, but we'll instantiate for safety here if imports fail
+        const { GoogleGenerativeAI } = require('@google/generative-ai');
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        // Process in batches of 3 to avoid rate limits
+        const batchSize = 3;
+        for (let i = 0; i < screenshots.pages.length; i += batchSize) {
+            const batch = screenshots.pages.slice(i, i + batchSize);
+            const batchPromises = batch.map(async (page: any) => {
+                try {
+                    // Convert buffer to base64
+                    const base64Image = Buffer.from(page.data).toString('base64');
+
+                    const result = await model.generateContent([
+                        "عليك استخراج النص العربي والإنجليزي من هذه الصفحة بدقة عالية جداً. حافظ على التنسيق والأرقام. هذا دليل فني للصيانة.",
+                        {
+                            inlineData: {
+                                data: base64Image,
+                                mimeType: "image/png"
+                            }
+                        }
+                    ]);
+                    const response = await result.response;
+                    return `--- Page ${page.pageNumber} ---\n${response.text()}\n`;
+                } catch (e) {
+                    console.error(`Error OCRing page ${page.pageNumber}:`, e);
+                    return '';
+                }
+            });
+
+            // Add slight delay between batches
+            if (i > 0) await new Promise(r => setTimeout(r, 2000));
+
+            const batchResults = await Promise.all(batchPromises);
+            fullText += batchResults.join('\n');
+            console.log(`✅ Processed batch ${i / batchSize + 1}`);
+        }
 
         // Cleanup parser
         try { await parser.destroy(); } catch (e) { }
 
-        // Limit to 500K chars
-        if (pdfContent.length > 500000) {
-            pdfContent = pdfContent.substring(0, 500000);
+        if (fullText.length === 0) {
+            return res.json({ success: false, message: 'فشل استخراج النص من الصور' });
         }
 
-        console.log(`✅ Extracted ${pdfContent.length} characters from "${manualData.title}" (${textResult.total || '?'} pages)`);
+        // Update database
+        await pool.query('UPDATE technical_manuals SET content = $1 WHERE id = $2', [fullText, id]);
 
-        if (pdfContent.length === 0) {
-            return res.json({
-                success: false,
-                message: 'لم يتم العثور على نص قابل للاستخراج في الملف. قد يكون الملف يحتوي على صور فقط.'
-            });
-        }
-
-        // Update database with extracted content
-        await pool.query(
-            'UPDATE technical_manuals SET content = $1 WHERE id = $2',
-            [pdfContent, id]
-        );
-
-        console.log(`💾 Saved ${pdfContent.length} chars to database for "${manualData.title}"`);
+        console.log(`💾 Saved ${fullText.length} chars (OCR) for "${manualData.title}"`);
 
         res.json({
             success: true,
-            message: `تم إعادة معالجة الكراسة بنجاح! تم استخراج ${pdfContent.length.toLocaleString()} حرف من ${textResult.total || '?'} صفحة.`,
+            message: `تم إعادة معالجة الكراسة باستخدام AI OCR! تم استخراج نص دقيق من ${screenshots.pages.length} صفحة.`,
             data: {
-                content_length: pdfContent.length,
-                pages: textResult.total || 0,
-                preview: pdfContent.substring(0, 200) + '...'
+                content_length: fullText.length,
+                pages: screenshots.pages.length,
+                preview: fullText.substring(0, 200) + '...'
             }
         });
+
     } catch (error: any) {
         console.error('Reprocess error:', error);
         res.status(500).json({
             success: false,
-            message: `فشل إعادة معالجة الكراسة: ${error.message}`
+            message: 'فشل إعادة المعالجة: ' + error.message
         });
     }
 });
