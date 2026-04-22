@@ -18,27 +18,22 @@ console.log('   Connection string preview:', connectionString ? connectionString
 const poolConfig = connectionString ? {
     connectionString,
     ssl: isProduction ? { rejectUnauthorized: false } : false,
-    // Force IPv4 to prevent IPv6 connection issues
-    options: '-c search_path=public'
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
 } : {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),
     database: process.env.DB_NAME || 'intelligent_technical_assistant',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || '',
-    ssl: isProduction ? { rejectUnauthorized: false } : false
-};
-
-const pool = new Pool({
-    ...poolConfig,
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
-    // Force IPv4
-    ...(connectionString && {
-        host: new URL(connectionString.replace('postgresql://', 'http://')).hostname
-    })
-});
+};
+
+const pool = new Pool(poolConfig);
 
 /**
  * Initialize PostgreSQL connection pool

@@ -573,8 +573,13 @@ const startServer = async () => {
             console.log('═══════════════════════════════════════════════════════');
             console.log('');
         });
-    } catch (error) {
-        console.error('❌ Failed to start server:', error);
+    } catch (error: any) {
+        console.error('❌ Failed to start server!');
+        console.error('Error Message:', error.message);
+        console.error('Error Code:', error.code);
+        if (error.detail) console.error('Error Detail:', error.detail);
+        if (error.hint) console.error('Error Hint:', error.hint);
+        console.error('Stack Trace:', error.stack);
         process.exit(1);
     }
 };

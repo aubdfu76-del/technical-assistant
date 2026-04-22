@@ -47,6 +47,23 @@ export async function runMigrations() {
         `);
         console.log('✅ Migration 6: Added technicians_count column to repair_tasks');
 
+        // Migration 7: Create technical_manuals table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS technical_manuals (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                file_path TEXT NOT NULL,
+                vehicle_type VARCHAR(100),
+                uploaded_by INTEGER REFERENCES users(id),
+                file_size VARCHAR(50),
+                content TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('✅ Migration 7: Created technical_manuals table');
+
         console.log('✅ All migrations completed successfully!');
     } catch (error) {
         console.error('❌ Migration error:', error);
