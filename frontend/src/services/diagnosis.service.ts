@@ -35,5 +35,10 @@ export const diagnosisService = {
     createCommonFault: async (data: any) => {
         const response = await api.post('/diagnosis/common', data);
         return response.data;
+    },
+
+    updateCommonFault: async (id: number, data: any) => {
+        const response = await api.put(`/diagnosis/common/${id}`, data);
+        return response.data;
     }
 };

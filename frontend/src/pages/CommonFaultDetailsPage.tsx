@@ -6,10 +6,16 @@ import {
     Activity,
     CheckCircle2,
     Cpu,
-    ArrowLeft
+    ArrowLeft,
+    Edit2,
+    Plus,
+    Trash2,
+    Save,
+    X as CloseIcon
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
+import { Modal } from '../components/Modal';
 import { diagnosisService, type CommonFaultDetails } from '../services/diagnosis.service';
 
 const CommonFaultDetailsPage = () => {
@@ -18,6 +24,13 @@ const CommonFaultDetailsPage = () => {
     const [data, setData] = useState<CommonFaultDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Editing states
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editType, setEditType] = useState<'symptoms' | 'causes'>('symptoms');
+    const [editList, setEditList] = useState<string[]>([]);
+    const [newItem, setNewItem] = useState('');
+    const [saving, setSaving] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -42,6 +55,56 @@ const CommonFaultDetailsPage = () => {
             fetchData();
         }
     }, [id]);
+
+    const handleOpenEdit = (type: 'symptoms' | 'causes') => {
+        setEditType(type);
+        setEditList(type === 'symptoms' ? [...(data?.symptoms || [])] : [...(data?.causes || [])]);
+        setNewItem('');
+        setIsEditModalOpen(true);
+    };
+
+    const handleAddItem = () => {
+        if (newItem.trim()) {
+            setEditList([...editList, newItem.trim()]);
+            setNewItem('');
+        }
+    };
+
+    const handleRemoveItem = (index: number) => {
+        setEditList(editList.filter((_, i) => i !== index));
+    };
+
+    const handleUpdateItem = (index: number, value: string) => {
+        const newList = [...editList];
+        newList[index] = value;
+        setEditList(newList);
+    };
+
+    const handleSave = async () => {
+        if (!data || !id) return;
+
+        setSaving(true);
+        try {
+            const updateData = {
+                ...data,
+                symptoms: editType === 'symptoms' ? editList : data.symptoms,
+                causes: editType === 'causes' ? editList : data.causes
+            };
+
+            const response = await diagnosisService.updateCommonFault(Number(id), updateData);
+            if (response.success) {
+                setData(updateData);
+                setIsEditModalOpen(false);
+            } else {
+                alert(response.message || 'فشل التحديث');
+            }
+        } catch (err) {
+            console.error('❌ Update error:', err);
+            alert('حدث خطأ أثناء حفظ التغييرات');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     if (loading) return (
         <DashboardLayout>
@@ -114,13 +177,36 @@ const CommonFaultDetailsPage = () => {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="glass-card"
-                        style={{ flex: 1, padding: '30px', minWidth: '400px' }}
+                        style={{ flex: 1, padding: '30px', minWidth: '400px', position: 'relative' }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                            <div style={{ width: '40px', height: '40px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <AlertCircle size={24} color="#ef4444" />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <AlertCircle size={24} color="#ef4444" />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem' }}>الأعراض المحتملة</h3>
                             </div>
-                            <h3 style={{ fontSize: '1.2rem' }}>الأعراض المحتملة</h3>
+
+                            <button
+                                onClick={() => handleOpenEdit('symptoms')}
+                                style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    color: 'var(--color-text-muted)',
+                                    padding: '8px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; e.currentTarget.style.color = '#3b82f6'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--color-text-muted)'; }}
+                            >
+                                <Edit2 size={16} />
+                                <span style={{ fontSize: '0.85rem' }}>تعديل</span>
+                            </button>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -148,13 +234,36 @@ const CommonFaultDetailsPage = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="glass-card"
-                        style={{ flex: 1, padding: '30px', minWidth: '400px' }}
+                        style={{ flex: 1, padding: '30px', minWidth: '400px', position: 'relative' }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                            <div style={{ width: '40px', height: '40px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Cpu size={24} color="#8b5cf6" />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ width: '40px', height: '40px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Cpu size={24} color="#8b5cf6" />
+                                </div>
+                                <h3 style={{ fontSize: '1.2rem' }}>الأسباب المحتملة</h3>
                             </div>
-                            <h3 style={{ fontSize: '1.2rem' }}>الأسباب المحتملة</h3>
+
+                            <button
+                                onClick={() => handleOpenEdit('causes')}
+                                style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    color: 'var(--color-text-muted)',
+                                    padding: '8px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)'; e.currentTarget.style.color = '#8b5cf6'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--color-text-muted)'; }}
+                            >
+                                <Edit2 size={16} />
+                                <span style={{ fontSize: '0.85rem' }}>تعديل</span>
+                            </button>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -214,6 +323,126 @@ const CommonFaultDetailsPage = () => {
                     </button>
                 </motion.div>
             </div>
+
+            {/* Edit Modal */}
+            <Modal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                title={editType === 'symptoms' ? 'تعديل الأعراض المحتملة' : 'تعديل الأسباب المحتملة'}
+                maxWidth="600px"
+            >
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Add New Item */}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <input
+                            type="text"
+                            value={newItem}
+                            onChange={(e) => setNewItem(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddItem()}
+                            placeholder={editType === 'symptoms' ? 'أضف عرضاً جديداً...' : 'أضف سبباً جديداً...'}
+                            className="glass-input"
+                            style={{ flex: 1, padding: '12px 16px' }}
+                        />
+                        <button
+                            onClick={handleAddItem}
+                            className="neon-button"
+                            style={{ padding: '0 20px', height: 'auto' }}
+                        >
+                            <Plus size={20} />
+                        </button>
+                    </div>
+
+                    {/* Items List */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        maxHeight: '400px',
+                        overflowY: 'auto',
+                        paddingRight: '8px'
+                    }}>
+                        {editList.map((item, idx) => (
+                            <div key={idx} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '12px',
+                                background: 'rgba(255,255,255,0.02)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                borderRadius: '12px'
+                            }}>
+                                <input
+                                    type="text"
+                                    value={item}
+                                    onChange={(e) => handleUpdateItem(idx, e.target.value)}
+                                    style={{
+                                        flex: 1,
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#fff',
+                                        fontSize: '0.95rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                                <button
+                                    onClick={() => handleRemoveItem(idx)}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#ef4444',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        borderRadius: '6px',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                        ))}
+                        {editList.length === 0 && (
+                            <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px' }}>
+                                القائمة فارغة. أضف بعض العناصر.
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
+                        <button
+                            onClick={() => setIsEditModalOpen(false)}
+                            style={{
+                                padding: '12px 24px',
+                                background: 'transparent',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                color: '#fff',
+                                borderRadius: '10px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            إلغاء
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="neon-button"
+                            style={{ padding: '12px 30px', gap: '8px' }}
+                        >
+                            {saving ? (
+                                <div className="spinner" style={{ width: '18px', height: '18px' }} />
+                            ) : (
+                                <Save size={18} />
+                            )}
+                            <span>{saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}</span>
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </DashboardLayout>
     );
 };
