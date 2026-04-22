@@ -13,7 +13,22 @@ const connectionString = process.env.DATABASE_URL;
 console.log('🔍 Environment Check:');
 console.log('   NODE_ENV:', process.env.NODE_ENV);
 console.log('   DATABASE_URL exists:', !!connectionString);
-console.log('   Connection string preview:', connectionString ? connectionString.substring(0, 30) + '...' : 'MISSING');
+
+if (connectionString) {
+    try {
+        const url = new URL(connectionString.replace('postgresql://', 'http://').replace('postgres://', 'http://'));
+        console.log('   --- Database URL Components ---');
+        console.log('   Protocol:', connectionString.split(':')[0]);
+        console.log('   Hostname:', url.hostname);
+        console.log('   Port:', url.port || '5432 (default)');
+        console.log('   Username:', url.username);
+        console.log('   Database:', url.pathname.split('/')[1] || 'postgres');
+        console.log('   ---');
+    } catch (e) {
+        console.log('   ⚠️ Could not parse connection string for debugging.');
+        console.log('   Connection string preview:', connectionString.substring(0, 30) + '...');
+    }
+}
 
 const poolConfig = connectionString ? {
     connectionString,
